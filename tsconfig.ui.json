@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": ".",
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": []
+  },
+  "include": ["ui/**/*.ts"]
+}

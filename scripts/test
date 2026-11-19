@@ -6,5 +6,5 @@ if [ ! -x node_modules/.bin/tsc ] || [ ! -x node_modules/.bin/tsx ]; then
 fi
 node_modules/.bin/tsc --noEmit
 node_modules/.bin/tsc -p tsconfig.ui.json --noEmit
-node --test test
+node --test test/*.mjs
 node --import tsx --test test/ui.test.ts

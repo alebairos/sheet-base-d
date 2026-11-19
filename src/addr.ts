@@ -31,3 +31,28 @@ export function parseCellSelector(ref: string): { sheet: string; addr: CellAddr 
   if (addr === null) throw new Error("cell ref must look like Sheet1!A1");
   return { sheet: ref.slice(0, bang), addr };
 }
+
+export type SheetCell = { sheet: string | null; col: number; row: number };
+
+export function collectCells(
+  start: SheetCell,
+  end: SheetCell,
+  currentSheet: string,
+): { sheet: string; col: number; row: number }[] | null {
+  const sheet = rangeSheet(start, end, currentSheet);
+  if (sheet === null) return null;
+  const c1 = Math.min(start.col, end.col);
+  const c2 = Math.max(start.col, end.col);
+  const r1 = Math.min(start.row, end.row);
+  const r2 = Math.max(start.row, end.row);
+  const cells: { sheet: string; col: number; row: number }[] = [];
+  for (let row = r1; row <= r2; row++) {
+    for (let col = c1; col <= c2; col++) cells.push({ sheet, col, row });
+  }
+  return cells;
+}
+
+function rangeSheet(start: SheetCell, end: SheetCell, currentSheet: string): string | null {
+  if (start.sheet !== null && end.sheet !== null && start.sheet !== end.sheet) return null;
+  return start.sheet ?? end.sheet ?? currentSheet;
+}

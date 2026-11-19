@@ -12,7 +12,7 @@ const formulaBook = '{"sheets":{"Sheet1":{"A1":1,"B1":"=1+1"}}}';
 const formulaOut = '{"sheets":{"Sheet1":{"A1":1,"B1":2}}}\n';
 
 function run(args, input) {
-  return spawnSync(engine, args, { input, encoding: "utf8" });
+  return spawnSync(engine, args, { input, encoding: "utf8", timeout: 5000 });
 }
 
 test("stdin JSON calculates a literal formula", () => {
@@ -209,15 +209,148 @@ test("coercion, concatenation, references, and unknown functions", () => {
         A7: "0.333333333333333",
         A8: "1E+020",
         A9: { error: "#NAME?" },
-        A10: { error: "#REF!" },
-        A11: { error: "#REF!" },
+        A10: 5,
+        A11: 5,
         A12: { error: "#REF!" },
-        A13: { error: "#REF!" },
+        A13: { error: "#VALUE!" },
         A14: { error: "#VALUE!" },
         A15: 'say "hi"',
-        A16: { error: "#REF!" },
+        A16: 6,
         A17: { error: "#NAME?" },
       },
+    },
+  });
+});
+
+test("a reference reads the referenced cell", () => {
+  const res = run(["-"], '{"sheets":{"Sheet1":{"A1":10,"B1":"=A1"}}}');
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: { Sheet1: { A1: 10, B1: 10 } },
+  });
+});
+
+test("a chain calculates in dependency order", () => {
+  const input = { sheets: { Sheet1: { C1: "=B1+1", B1: "=A1*2", A1: 10 } } };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: { Sheet1: { C1: 21, B1: 20, A1: 10 } },
+  });
+});
+
+test("cross-sheet references and a self-reference", () => {
+  const input = {
+    sheets: {
+      Sheet1: { A1: 10, B1: "=A1*2", C1: "=Sheet2!A1+B1" },
+      Sheet2: { A1: 5, B1: "=B1" },
+    },
+  };
+  const res = spawnSync(engine, ["-"], {
+    input: JSON.stringify(input),
+    encoding: "utf8",
+    timeout: 2000,
+  });
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: {
+      Sheet1: { A1: 10, B1: 20, C1: 25 },
+      Sheet2: { A1: 5, B1: { error: "#CIRC!" } },
+    },
+  });
+});
+
+test("--cell follows dependencies", () => {
+  const input = {
+    sheets: {
+      Sheet1: { A1: 10, B1: "=A1*2", C1: "=Sheet2!A1+B1" },
+      Sheet2: { A1: 5 },
+    },
+  };
+  const res = run(["-", "--cell", "Sheet1!C1"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(res.stdout, "25\n");
+});
+
+test("a blank reference is 0 in arithmetic and empty in concatenation", () => {
+  const input = {
+    sheets: {
+      Sheet1: { B1: "=A1+1", C1: "=A1", D1: '=A1&"x"', E1: '=C1&"x"' },
+    },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: { Sheet1: { B1: 1, C1: 0, D1: "x", E1: "0x" } },
+  });
+});
+
+test("a mutual cycle returns #CIRC! and finishes", { timeout: 2000 }, () => {
+  const input = { sheets: { Sheet1: { A1: "=B1", B1: "=A1" } } };
+  const res = spawnSync(engine, ["-"], {
+    input: JSON.stringify(input),
+    encoding: "utf8",
+    timeout: 2000,
+  });
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: {
+      Sheet1: { A1: { error: "#CIRC!" }, B1: { error: "#CIRC!" } },
+    },
+  });
+});
+
+test("absolute references read the same cell", () => {
+  const input = {
+    sheets: { Sheet1: { A1: 4, B1: "=$A$1", C1: "=A$1", D1: "=$A1" } },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: { Sheet1: { A1: 4, B1: 4, C1: 4, D1: 4 } },
+  });
+});
+
+test("quoted and case-insensitive sheet names resolve", () => {
+  const input = {
+    sheets: {
+      "Sheet Name": { A1: 3 },
+      Sheet1: { A1: "='Sheet Name'!A1", B1: "=sheet1!A1" },
+    },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: {
+      "Sheet Name": { A1: 3 },
+      Sheet1: { A1: 3, B1: 3 },
+    },
+  });
+});
+
+test("ranges used as values follow Calc", () => {
+  const input = {
+    sheets: {
+      Col: { A1: 10, A2: 20, A3: 30, C1: "=A1:A3", C2: "=A1:A3+1", C4: "=A1:A3" },
+      SelfCol: { A1: 10, A2: "=A1:A3", A3: 30 },
+      Row: { A1: 10, B1: 20, C1: 30, D1: "=A1:C1", B2: "=A1:C1" },
+      RowSelf: { A1: 10, B1: "=A1:C1", C1: 30 },
+      Area: { A1: "=A1:B6", B2: "=Z1:Z1" },
+      Cross: { A1: "=Sheet2!A1:A1", B1: "=Other!A1", C1: "=Col!A1:Sheet2!A1" },
+      Sheet2: { A1: 5 },
+    },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: {
+      Col: { A1: 10, A2: 20, A3: 30, C1: 10, C2: 21, C4: { error: "#VALUE!" } },
+      SelfCol: { A1: 10, A2: { error: "#VALUE!" }, A3: 30 },
+      Row: { A1: 10, B1: 20, C1: 30, D1: { error: "#VALUE!" }, B2: 20 },
+      RowSelf: { A1: 10, B1: { error: "#CIRC!" }, C1: 30 },
+      Area: { A1: { error: "#VALUE!" }, B2: 0 },
+      Cross: { A1: 5, B1: { error: "#REF!" }, C1: { error: "#VALUE!" } },
+      Sheet2: { A1: 5 },
     },
   });
 });

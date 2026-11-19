@@ -1,5 +1,7 @@
-import type { BinOp, Expr } from "./parse.js";
+import { parseA1 } from "./addr.js";
+import { parseFormula, type BinOp, type CellRef, type Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
+import type { InputCell, Workbook } from "./workbook.js";
 
 type Num = { kind: "number"; n: number };
 type Err = { kind: "error"; code: ErrorCode };
@@ -7,7 +9,94 @@ type NumOrErr = Num | Err;
 
 const EPS = 1 / (16777216 * 16777216);
 
-export function evalExpr(expr: Expr): Value {
+export type EvalCtx = {
+  workbook: Workbook;
+  sheet: string;
+  col: number;
+  row: number;
+  cache: Map<string, Value>;
+  visiting: Set<string>;
+  cells: Map<string, InputCell>;
+};
+
+export function cellKey(sheet: string, col: number, row: number): string {
+  return `${sheet}!${col},${row}`;
+}
+
+export function createEvalCtx(workbook: Workbook): EvalCtx {
+  const cells = new Map<string, InputCell>();
+  for (const [sheet, table] of Object.entries(workbook.sheets)) {
+    for (const [key, cell] of Object.entries(table)) {
+      const addr = parseA1(key);
+      if (addr === null) continue;
+      cells.set(cellKey(sheet, addr.col, addr.row), cell);
+    }
+  }
+  return {
+    workbook,
+    sheet: "",
+    col: 0,
+    row: 0,
+    cache: new Map(),
+    visiting: new Set(),
+    cells,
+  };
+}
+
+export function resolveSheet(ctx: EvalCtx, name: string | null): string | null {
+  const raw = name ?? ctx.sheet;
+  const sheets = ctx.workbook.sheets;
+  if (Object.hasOwn(sheets, raw)) return raw;
+  const lower = raw.toLowerCase();
+  let found: string | null = null;
+  for (const key of Object.keys(sheets)) {
+    if (key.toLowerCase() !== lower) continue;
+    if (found !== null) return null;
+    found = key;
+  }
+  return found;
+}
+
+export function computeCell(ctx: EvalCtx, sheet: string, col: number, row: number): Value {
+  const key = cellKey(sheet, col, row);
+  const cached = ctx.cache.get(key);
+  if (cached !== undefined) return cached;
+  if (ctx.visiting.has(key)) return { kind: "error", code: "#CIRC!" };
+  const input = ctx.cells.get(key);
+  if (input === undefined) {
+    const blank: Value = { kind: "blank" };
+    ctx.cache.set(key, blank);
+    return blank;
+  }
+  if (input.kind !== "formula") {
+    ctx.cache.set(key, input);
+    return input;
+  }
+  ctx.visiting.add(key);
+  const expr = parseFormula(input.src);
+  const value =
+    expr === null
+      ? ({ kind: "error", code: "#VALUE!" } satisfies Value)
+      : evalExpr(expr, { ...ctx, sheet, col, row });
+  ctx.visiting.delete(key);
+  const stored = formulaResult(value);
+  ctx.cache.set(key, stored);
+  return stored;
+}
+
+function formulaResult(value: Value): Value {
+  if (value.kind === "blank") return { kind: "number", n: 0 };
+  return value;
+}
+
+export function evalUnindexed(ctx: EvalCtx, sheet: string, cell: InputCell): Value {
+  if (cell.kind !== "formula") return cell;
+  const expr = parseFormula(cell.src);
+  if (expr === null) return { kind: "error", code: "#VALUE!" };
+  return formulaResult(evalExpr(expr, { ...ctx, sheet, col: -1, row: -1 }));
+}
+
+export function evalExpr(expr: Expr, ctx: EvalCtx): Value {
   switch (expr.kind) {
     case "number":
       return finiteNumber(expr.n);
@@ -18,19 +107,56 @@ export function evalExpr(expr: Expr): Value {
     case "blank":
       return expr;
     case "unary":
-      return evalUnary(expr.op, evalExpr(expr.arg));
+      return evalUnary(expr.op, evalExpr(expr.arg, ctx));
     case "binary":
-      return evalBinary(expr.op, evalExpr(expr.left), evalExpr(expr.right));
+      return evalBinary(expr.op, evalExpr(expr.left, ctx), evalExpr(expr.right, ctx));
     case "call":
       return { kind: "error", code: "#NAME?" };
     case "ref":
+      return evalRef(expr.cell, ctx);
     case "range":
-      return { kind: "error", code: "#REF!" };
+      return evalRange(expr.start, expr.end, ctx);
     default: {
       const exhaustive: never = expr;
       return exhaustive;
     }
   }
+}
+
+function evalRef(cell: CellRef, ctx: EvalCtx): Value {
+  const sheet = resolveSheet(ctx, cell.sheet);
+  if (sheet === null) return { kind: "error", code: "#REF!" };
+  return computeCell(ctx, sheet, cell.col, cell.row);
+}
+
+function evalRange(start: CellRef, end: CellRef, ctx: EvalCtx): Value {
+  const sheetA = resolveSheet(ctx, start.sheet);
+  const sheetB = resolveSheet(ctx, end.sheet);
+  if (sheetA === null || sheetB === null) return { kind: "error", code: "#REF!" };
+  if (sheetA !== sheetB) return { kind: "error", code: "#VALUE!" };
+  const hit = scalarRangeCell(start, end, ctx.col, ctx.row);
+  if (hit === null) return { kind: "error", code: "#VALUE!" };
+  return computeCell(ctx, sheetA, hit.col, hit.row);
+}
+
+function scalarRangeCell(
+  start: CellRef,
+  end: CellRef,
+  col: number,
+  row: number,
+): { col: number; row: number } | null {
+  const c1 = Math.min(start.col, end.col);
+  const c2 = Math.max(start.col, end.col);
+  const r1 = Math.min(start.row, end.row);
+  const r2 = Math.max(start.row, end.row);
+  if (c1 === c2 && r1 === r2) return { col: c1, row: r1 };
+  if (c1 !== c2 && r1 !== r2) return null;
+  if (c1 === c2) {
+    if (col === c1 || row < r1 || row > r2) return null;
+    return { col: c1, row };
+  }
+  if (col < c1 || col > c2) return null;
+  return { col, row: r1 };
 }
 
 function evalUnary(op: "-" | "%", arg: Value): Value {

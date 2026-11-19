@@ -1,6 +1,5 @@
 import { parseA1, type CellAddr } from "./addr.js";
-import { evalExpr } from "./eval.js";
-import { parseFormula } from "./parse.js";
+import { computeCell, createEvalCtx, evalUnindexed, resolveSheet } from "./eval.js";
 import { decodeCell, encodeCell, isJsonObject, type CellJson, type Value } from "./value.js";
 
 export type InputCell = Value | { kind: "formula"; src: string };
@@ -40,32 +39,14 @@ export function parseWorkbook(raw: unknown): Workbook {
   return { sheets };
 }
 
-function evalCell(cell: InputCell): Value {
-  switch (cell.kind) {
-    case "formula": {
-      const expr = parseFormula(cell.src);
-      if (expr === null) return { kind: "error", code: "#VALUE!" };
-      return evalExpr(expr);
-    }
-    case "number":
-    case "text":
-    case "bool":
-    case "blank":
-    case "error":
-      return cell;
-    default: {
-      const exhaustive: never = cell;
-      return exhaustive;
-    }
-  }
-}
-
 export function computeWorkbook(wb: Workbook): ComputedWorkbook {
+  const ctx = createEvalCtx(wb);
   const sheets: ComputedWorkbook["sheets"] = {};
   for (const [name, cells] of Object.entries(wb.sheets)) {
     const out: Record<string, Value> = {};
     for (const [key, cell] of Object.entries(cells)) {
-      const value = evalCell(cell);
+      const addr = parseA1(key);
+      const value = addr ? computeCell(ctx, name, addr.col, addr.row) : evalUnindexed(ctx, name, cell);
       if (value.kind !== "blank") out[key] = value;
     }
     sheets[name] = out;
@@ -87,13 +68,8 @@ export function encodeWorkbook(computed: ComputedWorkbook): WorkbookJson {
 }
 
 export function lookupCell(wb: Workbook, ref: { sheet: string; addr: CellAddr }): Value {
-  const cells = wb.sheets[ref.sheet];
-  if (cells === undefined) return { kind: "error", code: "#REF!" };
-  for (const [key, cell] of Object.entries(cells)) {
-    const addr = parseA1(key);
-    if (addr !== null && addr.col === ref.addr.col && addr.row === ref.addr.row) {
-      return evalCell(cell);
-    }
-  }
-  return { kind: "blank" };
+  const ctx = createEvalCtx(wb);
+  const sheet = resolveSheet(ctx, ref.sheet);
+  if (sheet === null) return { kind: "error", code: "#REF!" };
+  return computeCell(ctx, sheet, ref.addr.col, ref.addr.row);
 }

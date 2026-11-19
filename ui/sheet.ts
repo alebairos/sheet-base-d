@@ -8,6 +8,8 @@ import {
   type WorkbookJson,
 } from "../src/workbook.js";
 
+export type { Workbook };
+
 export type Sel = { col: number; row: number };
 
 export type GridCell = {

@@ -15,5 +15,5 @@
     "forceConsistentCasingInFileNames": true,
     "types": []
   },
-  "include": ["ui/**/*.ts"]
+  "include": ["ui/sheet.ts", "ui/main.ts"]
 }

@@ -5,6 +5,9 @@
   "engines": {
     "node": ">=20"
   },
+  "scripts": {
+    "ui": "tsc -p tsconfig.ui.json && node scripts/ui-server.mjs"
+  },
   "devDependencies": {
     "@types/node": "^26.6.6",
     "tsx": "^4.23.15",

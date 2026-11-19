@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   csvToWorkbook,
@@ -105,4 +106,16 @@ test("column headers use spreadsheet letters past Z", () => {
 test("selection stays inside the grid", () => {
   const model = gridModel(emptyWorkbook(), "Sheet1", { col: -5, row: -3 });
   assert.deepEqual(model.sel, { col: 0, row: 0 });
+});
+
+test("the UI page exists and the grid script imports the engine", () => {
+  const html = readFileSync(new URL("../ui/index.html", import.meta.url), "utf8");
+  const main = readFileSync(new URL("../ui/main.ts", import.meta.url), "utf8");
+  const sheet = readFileSync(new URL("../ui/sheet.ts", import.meta.url), "utf8");
+  assert.match(html, /\/dist\/ui\/main\.js/);
+  assert.match(html, /id="formula"/);
+  assert.match(html, /id="grid"/);
+  assert.match(main, /from ["']\.\/sheet\.js["']/);
+  assert.match(sheet, /computeWorkbook/);
+  assert.match(sheet, /from ["']\.\.\/src\/workbook\.js["']/);
 });

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sheet</title>
+    <link rel="stylesheet" href="/ui/app.css">
+  </head>
+  <body>
+    <header>
+      <button type="button" id="open-json">Open JSON</button>
+      <button type="button" id="open-csv">Open CSV</button>
+      <button type="button" id="save-json">Save JSON</button>
+      <button type="button" id="save-csv">Save CSV</button>
+      <label for="sheet">Sheet</label>
+      <select id="sheet"></select>
+      <p id="status" role="status"></p>
+    </header>
+    <div class="bar">
+      <label for="formula">Formula</label>
+      <input id="formula" type="text" spellcheck="false" autocomplete="off" autocapitalize="off">
+      <output id="error" for="formula" aria-live="polite"></output>
+    </div>
+    <p id="clip"></p>
+    <div id="grid" tabindex="0"></div>
+    <input id="file-json" type="file" accept="application/json,.json" hidden>
+    <input id="file-csv" type="file" accept="text/csv,.csv" hidden>
+    <script type="module" src="/dist/ui/main.js"></script>
+  </body>
+</html>

@@ -14,9 +14,9 @@ That command installs npm packages when `node_modules` is missing, typechecks wi
 
 From the repo root, run `npm run ui`. If `node_modules` is missing, run `./test.sh` once before that. Then open http://127.0.0.1:4173/.
 
-The page has a grid and a formula bar. Click a cell. Edit the formula bar. Press Enter to write the cell and move down. The bar shows the stored formula. It also shows an error code when the engine returns one. The grid shows the calculated value.
+The page has a grid and a formula bar. Click a cell. Edit the formula bar. Press Enter to write the cell and move down. Press Escape to drop the edit. The bar shows the stored formula. It also shows an error code when the engine returns one. The grid shows the calculated value.
 
-**Open JSON** and **Save JSON** use the workbook shape in [SPEC.md](SPEC.md). **Open CSV** and **Save CSV** use the active sheet. Opening a CSV replaces the workbook with one sheet named Sheet1. A formula stays in the file as text that starts with `=`. `./engine` is unchanged.
+**Open JSON** and **Save JSON** use the workbook shape in [SPEC.md](SPEC.md). **Save CSV** writes the active sheet. **Open CSV** replaces the workbook with one sheet named Sheet1. A formula stays in the file as text that starts with `=`.
 
 ## CLI
 
@@ -31,19 +31,3 @@ The engine calculates every formula cell in dependency order and reuses the resu
 A range used as one value follows Calc. `=A1:A1` is that cell. A single column uses the cell on the formula's row, from a formula in another column. A formula in that same column is `{"error":"#VALUE!"}`. A single row uses the cell on the formula's column when that column is inside the range. A range with more than one row and more than one column, such as `=A1:B6`, is `{"error":"#VALUE!"}`.
 
 `./engine <file|-> --cell Sheet1!A1` prints one cell as JSON. Dependencies of that formula are calculated too. A missing cell prints `null`. A missing sheet prints `{"error":"#REF!"}`.
-
-## UI
-
-Run `npm run ui` from the repo root.
-
-Open http://127.0.0.1:4173 .
-
-The page is a grid and a formula bar. Click a cell to select it. The bar shows the stored formula, or the literal when the cell is not a formula. When the value is an error, the error code appears beside the formula.
-
-Type, or press Enter, to edit the selected cell. Enter commits the edit and moves the selection down. Escape cancels the edit.
-
-Open JSON reads a workbook in the form from [SPEC.md](SPEC.md). Save JSON writes that same form. A formula stays text that starts with `=`.
-
-Open CSV replaces the cells on the active sheet. Save CSV writes that sheet. Other sheets stay in the workbook. CSV keeps formulas and literals. An error constant is written as its code, and opening that CSV reads the code as text.
-
-The page calculates formulas with `computeWorkbook` in `src/workbook.ts`. `./engine` is the CLI in the section above.

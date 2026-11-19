@@ -87,8 +87,7 @@ test("editing a cell recomputes through the engine", () => {
   assert.equal(model.cells[0]?.[1]?.display, "5");
 });
 
-test("the grid shows the engine value for a Calc power formula", () => {
-  // Calc evaluates 2^3^2 as 64. A local reimplementation of left-to-right power would show 512.
+test("the grid shows 64 for =2^3^2", () => {
   const wb = workbookFromJson('{"sheets":{"Sheet1":{"A1":"=2^3^2"}}}');
   const model = gridModel(wb, "Sheet1", { col: 0, row: 0 });
   assert.equal(model.bar.text, "=2^3^2");

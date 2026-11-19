@@ -40,6 +40,8 @@ byId("save-csv", HTMLButtonElement).addEventListener("click", saveCsv);
 formula.addEventListener("input", () => {
   dirty = true;
   errorOut.textContent = "";
+  const selected = gridEl.querySelector(".is-selected");
+  if (selected !== null) selected.textContent = formula.value;
 });
 
 formula.addEventListener("keydown", (ev) => {

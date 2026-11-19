@@ -1,4 +1,6 @@
 import { parseA1, type CellAddr } from "./addr.js";
+import { evalExpr } from "./eval.js";
+import { parseFormula } from "./parse.js";
 import { decodeCell, encodeCell, isJsonObject, type CellJson, type Value } from "./value.js";
 
 export type InputCell = Value | { kind: "formula"; src: string };
@@ -40,8 +42,11 @@ export function parseWorkbook(raw: unknown): Workbook {
 
 function evalCell(cell: InputCell): Value {
   switch (cell.kind) {
-    case "formula":
-      return { kind: "error", code: "#NAME?" };
+    case "formula": {
+      const expr = parseFormula(cell.src);
+      if (expr === null) return { kind: "error", code: "#VALUE!" };
+      return evalExpr(expr);
+    }
     case "number":
     case "text":
     case "bool":

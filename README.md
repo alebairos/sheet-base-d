@@ -14,6 +14,6 @@ That command installs npm packages when `node_modules` is missing, typechecks wi
 
 `./engine <file|->` reads workbook JSON from a file, or from stdin when the path is `-`.
 
-Numbers, strings, and booleans pass through. A string that starts with `=` is a formula. Each formula is returned as `{"error":"#NAME?"}` because formulas are not calculated in this version.
+Numbers, strings, and booleans pass through. A string that starts with `=` is a formula. Formulas made of literals and the operators `+ - * / ^ & = <> < > <= >=`, unary minus, and `%` are calculated. `=1+2` is 3, `=50%` is 0.5, and `=1/0` is `{"error":"#DIV/0!"}`. Exponentiation follows Calc, so `=2^3^2` is 64 and `=-2^2` is 4. A function call is `{"error":"#NAME?"}`. A cell reference is `{"error":"#REF!"}`.
 
 `./engine <file|-> --cell Sheet1!A1` prints one cell as JSON. A missing cell prints `null`. A missing sheet prints `{"error":"#REF!"}`.

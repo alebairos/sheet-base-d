@@ -1,6 +1,6 @@
 export type CellAddr = { col: number; row: number };
 
-function columnIndex(letters: string): number | null {
+export function columnIndex(letters: string): number | null {
   let n = 0;
   for (const ch of letters.toUpperCase()) {
     const digit = ch.charCodeAt(0) - 64;

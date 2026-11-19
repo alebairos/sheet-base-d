@@ -101,7 +101,7 @@ function addScalar(total: number, value: Value, host: FnHost): Value {
     case "error":
       return value;
     case "text":
-      return host.number(total);
+      return { kind: "error", code: "#VALUE!" };
     case "number":
       return host.number(total + value.n);
     case "blank":

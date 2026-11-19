@@ -30,9 +30,10 @@ test("SUM skips text in a range", () => {
   assert.equal(out.B1, 4);
 });
 
-test("SUM skips text literals", () => {
-  const out = compute({ A1: '=SUM(1,"x",2)' });
-  assert.equal(out.A1, 3);
+test("SUM rejects text literals", () => {
+  const out = compute({ A1: '=SUM(1,"x",2)', B1: '=SUM("2")' });
+  assert.deepEqual(out.A1, { error: "#VALUE!" });
+  assert.deepEqual(out.B1, { error: "#VALUE!" });
 });
 
 test("SUM propagates the first error in a range", () => {

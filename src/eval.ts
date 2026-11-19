@@ -131,8 +131,17 @@ function evalCall(name: string, args: readonly Expr[], ctx: EvalCtx): Value {
     arg: (expr) => evalArg(expr, ctx),
     cell: (sheet, col, row) => computeCell(ctx, sheet, col, row),
     number: finiteNumber,
+    scalar: (expr) => scalarExpr(expr, ctx),
   };
   return fn(args, host);
+}
+
+function scalarExpr(expr: Expr, ctx: EvalCtx): Value {
+  const arg = evalArg(expr, ctx);
+  if (arg.kind === "value") return arg.value;
+  const hit = scalarRangeCell(arg.col0, arg.row0, arg.col1, arg.row1, ctx.col, ctx.row);
+  if (hit === null) return { kind: "error", code: "#VALUE!" };
+  return computeCell(ctx, arg.sheet, hit.col, hit.row);
 }
 
 function evalArg(expr: Expr, ctx: EvalCtx): Arg {
@@ -167,21 +176,23 @@ function evalRange(start: CellRef, end: CellRef, ctx: EvalCtx): Value {
   const sheetB = resolveSheet(ctx, end.sheet);
   if (sheetA === null || sheetB === null) return { kind: "error", code: "#REF!" };
   if (sheetA !== sheetB) return { kind: "error", code: "#VALUE!" };
-  const hit = scalarRangeCell(start, end, ctx.col, ctx.row);
+  const c1 = Math.min(start.col, end.col);
+  const c2 = Math.max(start.col, end.col);
+  const r1 = Math.min(start.row, end.row);
+  const r2 = Math.max(start.row, end.row);
+  const hit = scalarRangeCell(c1, r1, c2, r2, ctx.col, ctx.row);
   if (hit === null) return { kind: "error", code: "#VALUE!" };
   return computeCell(ctx, sheetA, hit.col, hit.row);
 }
 
 function scalarRangeCell(
-  start: CellRef,
-  end: CellRef,
+  c1: number,
+  r1: number,
+  c2: number,
+  r2: number,
   col: number,
   row: number,
 ): { col: number; row: number } | null {
-  const c1 = Math.min(start.col, end.col);
-  const c2 = Math.max(start.col, end.col);
-  const r1 = Math.min(start.row, end.row);
-  const r2 = Math.max(start.row, end.row);
   if (c1 === c2 && r1 === r2) return { col: c1, row: r1 };
   if (c1 !== c2 && r1 !== r2) return null;
   if (c1 === c2) {
@@ -353,7 +364,7 @@ export function asNumber(value: Value): NumOrErr {
   }
 }
 
-function asText(value: Value): { kind: "text"; t: string } | Err {
+export function asText(value: Value): { kind: "text"; t: string } | Err {
   switch (value.kind) {
     case "text":
       return value;

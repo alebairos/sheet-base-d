@@ -66,7 +66,7 @@ test("SUM of a single cell ref reads that cell", () => {
 });
 
 test("an unknown function is still #NAME?", () => {
-  const out = compute({ A1: "=IF(1,2)" });
+  const out = compute({ A1: "=FOO(1,2)" });
   assert.deepEqual(out.A1, { error: "#NAME?" });
 });
 

@@ -1,4 +1,6 @@
 import { asNumber, raise } from "./eval.js";
+import { logicFns } from "./logic.js";
+import { textFns } from "./text.js";
 import type { Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
 
@@ -17,6 +19,7 @@ export type FnHost = {
   arg(expr: Expr): Arg;
   cell(sheet: string, col: number, row: number): Value;
   number(n: number): Value;
+  scalar(expr: Expr): Value;
 };
 
 export type Fn = (args: readonly Expr[], host: FnHost) => Value;
@@ -58,6 +61,8 @@ const FNS: { readonly [name: string]: Fn } = {
   AVERAGEIF: averageif,
   MEDIAN: median,
   STDEV: stdev,
+  ...logicFns,
+  ...textFns,
 };
 
 export function lookupFn(name: string): Fn | undefined {

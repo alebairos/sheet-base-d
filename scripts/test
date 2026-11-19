@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+cd "$(dirname "$0")/.."
+if [ ! -x node_modules/.bin/tsc ] || [ ! -x node_modules/.bin/tsx ]; then
+  npm ci
+fi
+node_modules/.bin/tsc --noEmit
+node --test test/engine.test.mjs

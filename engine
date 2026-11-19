@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+ROOT=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+TSX="$ROOT/node_modules/.bin/tsx"
+if [ ! -x "$TSX" ]; then
+  echo "missing dependencies. run ./test.sh" >&2
+  exit 1
+fi
+exec "$TSX" "$ROOT/src/cli.ts" "$@"

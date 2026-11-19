@@ -183,7 +183,7 @@ test("coercion, concatenation, references, and unknown functions", () => {
         A6: "=TRUE&FALSE",
         A7: '=(1/3)&""',
         A8: '=1E+20&""',
-        A9: "=SUM(1,2)",
+        A9: "=FOO(1,2)",
         A10: "=A1",
         A11: "=$A$1",
         A12: "=Sheet2!B2",
@@ -191,7 +191,7 @@ test("coercion, concatenation, references, and unknown functions", () => {
         A14: "=1+",
         A15: '="say ""hi"""',
         A16: "=1+A1",
-        A17: "=SUM(1/0)",
+        A17: "=FOO(1/0)",
       },
     },
   };

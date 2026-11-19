@@ -1,4 +1,5 @@
 import { parseA1 } from "./addr.js";
+import { lookupFn, type Arg, type FnHost } from "./fn.js";
 import { parseFormula, type BinOp, type CellRef, type Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
 import type { InputCell, Workbook } from "./workbook.js";
@@ -111,7 +112,7 @@ export function evalExpr(expr: Expr, ctx: EvalCtx): Value {
     case "binary":
       return evalBinary(expr.op, evalExpr(expr.left, ctx), evalExpr(expr.right, ctx));
     case "call":
-      return { kind: "error", code: "#NAME?" };
+      return evalCall(expr.name, expr.args, ctx);
     case "ref":
       return evalRef(expr.cell, ctx);
     case "range":
@@ -121,6 +122,38 @@ export function evalExpr(expr: Expr, ctx: EvalCtx): Value {
       return exhaustive;
     }
   }
+}
+
+function evalCall(name: string, args: readonly Expr[], ctx: EvalCtx): Value {
+  const fn = lookupFn(name);
+  if (fn === undefined) return { kind: "error", code: "#NAME?" };
+  const host: FnHost = {
+    arg: (expr) => evalArg(expr, ctx),
+    cell: (sheet, col, row) => computeCell(ctx, sheet, col, row),
+    number: finiteNumber,
+  };
+  return fn(args, host);
+}
+
+function evalArg(expr: Expr, ctx: EvalCtx): Arg {
+  if (expr.kind === "ref") return rangeArg(expr.cell, expr.cell, ctx);
+  if (expr.kind === "range") return rangeArg(expr.start, expr.end, ctx);
+  return { kind: "value", value: evalExpr(expr, ctx) };
+}
+
+function rangeArg(start: CellRef, end: CellRef, ctx: EvalCtx): Arg {
+  const sheetA = resolveSheet(ctx, start.sheet);
+  const sheetB = resolveSheet(ctx, end.sheet);
+  if (sheetA === null || sheetB === null) return { kind: "value", value: { kind: "error", code: "#REF!" } };
+  if (sheetA !== sheetB) return { kind: "value", value: { kind: "error", code: "#VALUE!" } };
+  return {
+    kind: "range",
+    sheet: sheetA,
+    col0: Math.min(start.col, end.col),
+    row0: Math.min(start.row, end.row),
+    col1: Math.max(start.col, end.col),
+    row1: Math.max(start.row, end.row),
+  };
 }
 
 function evalRef(cell: CellRef, ctx: EvalCtx): Value {

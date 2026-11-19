@@ -1,5 +1,6 @@
 import { asNumber, raise } from "./eval.js";
 import { logicFns } from "./logic.js";
+import { lookupFns } from "./lookup.js";
 import { textFns } from "./text.js";
 import type { Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
@@ -63,6 +64,7 @@ const FNS: { readonly [name: string]: Fn } = {
   STDEV: stdev,
   ...logicFns,
   ...textFns,
+  ...lookupFns,
 };
 
 export function lookupFn(name: string): Fn | undefined {

@@ -247,7 +247,7 @@ function divide(left: Value, right: Value): Value {
   return finiteNumber(l.n / r.n);
 }
 
-function raise(base: number, exp: number): number {
+export function raise(base: number, exp: number): number {
   if (exp === 0) return 1;
   if (base === 0) return exp > 0 ? 0 : Number.NaN;
   if (base < 0) {
@@ -331,7 +331,7 @@ function order(left: Value, right: Value): NumOrErr {
   return { kind: "number", n: l.n < r.n ? -1 : 1 };
 }
 
-function asNumber(value: Value): NumOrErr {
+export function asNumber(value: Value): NumOrErr {
   switch (value.kind) {
     case "number":
       return value;

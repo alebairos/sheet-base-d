@@ -143,6 +143,14 @@ const cases = [
     expect: 1,
     note: "wildcard * matches text cells only, not numbers",
   },
+  {
+    id: "wild-emoji-q",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "a😀b", B1: '=MATCH("a?b",A1,0)' } } },
+    cell: "Sheet1!B1",
+    expect: 1,
+    note: "? matches one Unicode code point, same as LEN/LEFT",
+  },
 ];
 
 function runCase(c) {

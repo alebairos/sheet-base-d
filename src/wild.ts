@@ -20,10 +20,10 @@ export function wildRegExp(pat: string): RegExp {
       }
     }
     if (c === "*") src += "[\\s\\S]*";
-    else if (c === "?") src += "[\\s\\S]";
+    else if (c === "?") src += ".";
     else src += escapeReg(c);
   }
-  return new RegExp(`${src}$`, "i");
+  return new RegExp(`${src}$`, "isu");
 }
 
 function escapeReg(c: string): string {

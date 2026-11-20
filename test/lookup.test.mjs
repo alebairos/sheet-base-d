@@ -122,6 +122,14 @@ test("MATCH tilde escapes a literal star and does not crash", () => {
   assert.deepEqual(out.B2, { error: "#N/A" });
 });
 
+test("MATCH question mark matches one Unicode code point", () => {
+  const out = compute({
+    A1: "a😀b",
+    B1: '=MATCH("a?b",A1,0)',
+  }).Sheet1;
+  assert.equal(out.B1, 1);
+});
+
 test("MATCH equates TRUE with 1 and numeric text with numbers only from the text side", () => {
   const out = compute({
     A1: "1",

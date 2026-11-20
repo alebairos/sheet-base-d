@@ -210,6 +210,21 @@ test("MATCH approximate on an unsorted column finds a later equal and otherwise 
   assert.equal(out.D3, 6);
 });
 
+test("approximate text lookup stops at the first greater key", () => {
+  const out = compute({
+    A1: "a",
+    B1: 10,
+    A2: "c",
+    B2: 20,
+    A3: "b",
+    B3: 30,
+    C1: '=MATCH("b",A1:A3,1)',
+    C2: '=VLOOKUP("b",A1:B3,2,TRUE)',
+  }).Sheet1;
+  assert.equal(out.C1, 1);
+  assert.equal(out.C2, 10);
+});
+
 test("INDEX reads a row and column, a column vector, and a row vector", () => {
   const out = compute({
     A1: 11,

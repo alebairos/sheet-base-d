@@ -565,6 +565,34 @@ const cases = [
     expect: 9,
     note: "Calc INDEX area 2 of a union is the second range",
   },
+  {
+    id: "match-text-approx",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: "a", A2: "c", A3: "b", B1: '=MATCH("b",A1:A3,1)' } } },
+    cell: "Sheet1!B1",
+    expect: 1,
+    note: "Calc approximate text MATCH stops at first greater key; later equal ignored",
+  },
+  {
+    id: "vlookup-text-approx",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: {
+          A1: "a",
+          B1: 10,
+          A2: "c",
+          B2: 20,
+          A3: "b",
+          B3: 30,
+          C1: '=VLOOKUP("b",A1:B3,2,TRUE)',
+        },
+      },
+    },
+    cell: "Sheet1!C1",
+    expect: 10,
+    note: "Calc approximate text VLOOKUP keeps earlier in-order row",
+  },
 ];
 
 function runCase(c) {

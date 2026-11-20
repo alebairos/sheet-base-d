@@ -52,6 +52,8 @@ class ParseFail extends Error {}
 
 class TrailingOp extends ParseFail {}
 
+class NameFail extends ParseFail {}
+
 class Parser {
   private readonly src: string;
   private i = 0;
@@ -132,7 +134,10 @@ class Parser {
     let s = "";
     for (;;) {
       const c = this.ch();
-      if (c === "") this.fail();
+      if (c === "") {
+        if (quote === '"') throw new NameFail();
+        this.fail();
+      }
       if (c === quote) {
         this.i++;
         if (this.ch() === quote) {
@@ -225,6 +230,7 @@ class Parser {
       this.tok = { k: "op", op: ">=" };
       return;
     }
+    if (c === "#") throw new NameFail();
     this.i++;
     if (c === "%") {
       this.tok = { k: "pct" };
@@ -489,7 +495,7 @@ function isNameChar(c: string): boolean {
 
 export type ParsedFormula =
   | { kind: "expr"; expr: Expr }
-  | { kind: "error"; code: "#VALUE!" | "#N/A" };
+  | { kind: "error"; code: "#VALUE!" | "#N/A" | "#NAME?" };
 
 export function parseFormula(src: string): ParsedFormula {
   if (!src.startsWith("=")) return { kind: "error", code: "#VALUE!" };
@@ -497,6 +503,7 @@ export function parseFormula(src: string): ParsedFormula {
     return { kind: "expr", expr: new Parser(src.slice(1)).parse() };
   } catch (err) {
     if (err instanceof TrailingOp) return { kind: "error", code: "#N/A" };
+    if (err instanceof NameFail) return { kind: "error", code: "#NAME?" };
     if (err instanceof ParseFail) return { kind: "error", code: "#VALUE!" };
     throw err;
   }

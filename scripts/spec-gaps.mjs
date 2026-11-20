@@ -267,6 +267,72 @@ const cases = [
     expect: { error: "#N/A" },
     note: "Calc Err:520 exports as #N/A",
   },
+  {
+    id: "cmp-upper-lt-lower",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: '="A"<"a"' } } },
+    cell: "Sheet1!A1",
+    expect: false,
+    note: "Calc text order case-folds; lowercase before uppercase",
+  },
+  {
+    id: "cmp-lower-lt-upper",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: '="a"<"A"' } } },
+    cell: "Sheet1!A1",
+    expect: true,
+    note: "Calc text order: a before A when case-sensitive",
+  },
+  {
+    id: "cmp-b-lt-a",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: '="B"<"a"' } } },
+    cell: "Sheet1!A1",
+    expect: false,
+    note: "case-fold then letter order; B is not before a",
+  },
+  {
+    id: "vlookup-bool-num",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: "=VLOOKUP(20,D1:E1,2,FALSE)", D1: 20, E1: false } } },
+    cell: "Sheet1!A1",
+    expect: 0,
+    note: "Calc VLOOKUP coerces boolean result to number; INDEX keeps bool",
+  },
+  {
+    id: "parse-open-string",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '="abc' } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#NAME?" },
+    note: "Calc unclosed string is #NAME?",
+  },
+  {
+    id: "parse-hash",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "=1#2" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#NAME?" },
+    note: "Calc bare # token is #NAME?",
+  },
+  {
+    id: "countif-inline-case",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: {
+          A1: "Apple",
+          A2: "apple",
+          A3: "APPLE",
+          A4: "banana",
+          B1: '=COUNTIF(A1:A4,"(?i)apple")',
+        },
+      },
+    },
+    cell: "Sheet1!B1",
+    expect: 3,
+    note: "Calc regex accepts (?i) inline case fold",
+  },
 ];
 
 function runCase(c) {

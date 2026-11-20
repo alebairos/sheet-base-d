@@ -369,3 +369,35 @@ test("VLOOKUP matches text without case and reads another sheet", () => {
   assert.equal(sheets.Sheet1.C3, "cross");
   assert.deepEqual(sheets.Sheet1.C4, { error: "#REF!" });
 });
+
+test("VLOOKUP returns a boolean as 0 or 1 and INDEX keeps the boolean", () => {
+  const out = compute({
+    D1: 20,
+    E1: false,
+    D2: 21,
+    E2: true,
+    A1: "=VLOOKUP(20,D1:E2,2,FALSE)",
+    A2: "=VLOOKUP(21,D1:E2,2,FALSE)",
+    A3: "=INDEX(E1:E2,1)",
+    A4: "=INDEX(E1:E2,2)",
+  }).Sheet1;
+  assert.equal(out.A1, 0);
+  assert.equal(out.A2, 1);
+  assert.equal(out.A3, false);
+  assert.equal(out.A4, true);
+});
+
+test("MATCH and VLOOKUP accept an inline (?i) flag", () => {
+  const out = compute({
+    A1: "Apple",
+    B1: 10,
+    A2: "banana",
+    B2: 20,
+    C1: '=MATCH("(?i)apple",A1:A2,0)',
+    C2: '=VLOOKUP("(?i)apple",A1:B2,2,FALSE)',
+    C3: '=MATCH("(?i)pear",A1:A2,0)',
+  }).Sheet1;
+  assert.equal(out.C1, 1);
+  assert.equal(out.C2, 10);
+  assert.deepEqual(out.C3, { error: "#N/A" });
+});

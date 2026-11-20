@@ -327,9 +327,7 @@ function order(left: Value, right: Value): NumOrErr {
   if (left.kind === "blank" && right.kind === "text") left = { kind: "text", t: "" };
   if (right.kind === "blank" && left.kind === "text") right = { kind: "text", t: "" };
   if (left.kind === "text" && right.kind === "text") {
-    if (left.t < right.t) return { kind: "number", n: -1 };
-    if (left.t > right.t) return { kind: "number", n: 1 };
-    return { kind: "number", n: 0 };
+    return { kind: "number", n: cmpText(left.t, right.t) };
   }
   if (left.kind === "text") return { kind: "number", n: 1 };
   if (right.kind === "text") return { kind: "number", n: -1 };
@@ -380,6 +378,34 @@ export function asText(value: Value): { kind: "text"; t: string } | Err {
       return exhaustive;
     }
   }
+}
+
+function cmpText(left: string, right: string): -1 | 0 | 1 {
+  const foldedLeft = left.toLowerCase();
+  const foldedRight = right.toLowerCase();
+  if (foldedLeft < foldedRight) return -1;
+  if (foldedLeft > foldedRight) return 1;
+  if (left === right) return 0;
+  const n = Math.min(left.length, right.length);
+  for (let i = 0; i < n; i++) {
+    const a = left.charAt(i);
+    const b = right.charAt(i);
+    if (a === b) continue;
+    const rank = caseRank(a) - caseRank(b);
+    if (rank !== 0) return rank < 0 ? -1 : 1;
+    return a < b ? -1 : 1;
+  }
+  if (left.length < right.length) return -1;
+  if (left.length > right.length) return 1;
+  return 0;
+}
+
+function caseRank(ch: string): number {
+  const lower = ch.toLowerCase();
+  const upper = ch.toUpperCase();
+  if (ch === lower && ch !== upper) return 0;
+  if (ch === upper && ch !== lower) return 1;
+  return 2;
 }
 
 function parseNumericText(raw: string): number | null {

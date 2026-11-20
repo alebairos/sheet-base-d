@@ -364,6 +364,25 @@ test("MEDIAN picks the middle or the mean of the two middle numbers", () => {
   assert.deepEqual(out.B3, { error: "#VALUE!" });
 });
 
+test("COUNTIF, SUMIF, and AVERAGEIF accept an inline (?i) flag", () => {
+  const out = compute({
+    A1: "Apple",
+    B1: 1,
+    A2: "apple",
+    B2: 1,
+    A3: "APPLE",
+    B3: 1,
+    A4: "banana",
+    B4: 1,
+    C1: '=COUNTIF(A1:A4,"(?i)apple")',
+    C2: '=SUMIF(A1:A4,"(?i)apple",B1:B4)',
+    C3: '=AVERAGEIF(A1:A4,"(?i)apple",B1:B4)',
+  });
+  assert.equal(out.C1, 3);
+  assert.equal(out.C2, 3);
+  assert.equal(out.C3, 1);
+});
+
 test("STDEV is the sample standard deviation", () => {
   const out = compute({
     A1: "=STDEV(1,2,3)",

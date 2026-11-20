@@ -36,7 +36,9 @@ function vlookup(args: readonly Expr[], host: FnHost): Value {
   const hit = findIndex(column(table, table.c0, host), key, approx ? "asc" : "exact");
   if (hit === null) return err("#N/A");
   if (typeof hit !== "number") return hit;
-  return host.cell(table.sheet, table.c0 + col - 1, table.r0 + hit);
+  const found = host.cell(table.sheet, table.c0 + col - 1, table.r0 + hit);
+  if (found.kind === "bool") return host.number(found.b ? 1 : 0);
+  return found;
 }
 
 function index(args: readonly Expr[], host: FnHost): Value {

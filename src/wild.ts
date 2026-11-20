@@ -22,7 +22,7 @@ export function criteriaText(value: Value): string | null {
 export function criteriaMatch(pattern: string, text: string): boolean {
   if (!isCriteriaRegex(pattern)) return text.toUpperCase() === pattern.toUpperCase();
   try {
-    return new RegExp(`^(?:${pattern})$`, "iu").test(text);
+    return new RegExp(`^(?:${pattern.replaceAll("(?i)", "")})$`, "iu").test(text);
   } catch {
     return text.toUpperCase() === pattern.toUpperCase();
   }

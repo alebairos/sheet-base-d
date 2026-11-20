@@ -175,6 +175,56 @@ test("comparisons return booleans", () => {
   });
 });
 
+test("text order case-folds, then sorts lowercase before uppercase", () => {
+  const input = {
+    sheets: {
+      Sheet1: {
+        A1: '="A"<"a"',
+        A2: '="a"<"A"',
+        A3: '="B"<"a"',
+        A4: '="A"="a"',
+      },
+    },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: {
+      Sheet1: {
+        A1: false,
+        A2: true,
+        A3: false,
+        A4: false,
+      },
+    },
+  });
+});
+
+test("an unclosed string or a bare hash is #NAME?", () => {
+  const input = {
+    sheets: {
+      Sheet1: {
+        A1: '="abc',
+        A2: "=1#2",
+        A3: "=1+",
+        A4: "=)",
+      },
+    },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: {
+      Sheet1: {
+        A1: { error: "#NAME?" },
+        A2: { error: "#NAME?" },
+        A3: { error: "#N/A" },
+        A4: { error: "#VALUE!" },
+      },
+    },
+  });
+});
+
 test("coercion, concatenation, references, and unknown functions", () => {
   const input = {
     sheets: {

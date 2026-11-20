@@ -441,6 +441,39 @@ test("COUNTIF (?-i) matches one case and (?i) still matches all cases", () => {
   assert.equal(out.B2, 3);
 });
 
+test("inline regex flags apply from the point they appear", () => {
+  const out = compute({
+    A1: "Ab",
+    A2: "AB",
+    A3: "ab",
+    A4: "a\nb",
+    A5: "ab",
+    A6: "a b",
+    B1: 1,
+    B2: 1,
+    B3: 1,
+    C1: '=COUNTIF(A1:A3,"(?i)a(?-i)b")',
+    C2: '=COUNTIF(A1:A3,"(?-i)(?i)ab")',
+    C3: '=COUNTIF(A4,"(?s)a.b")',
+    C4: '=COUNTIF(A5,"(?x)a b")',
+    C5: '=COUNTIF(A4,"a.b")',
+    C6: '=MATCH("(?i)a(?-i)b",A1:A3,0)',
+    C7: '=SUMIF(A1:A3,"(?i)a(?-i)b",B1:B3)',
+    C8: '=COUNTIF(A6,"(?x)a b")',
+    D1: "(",
+    D2: '=COUNTIF(D1,"[(?i)ab]")',
+  });
+  assert.equal(out.C1, 2);
+  assert.equal(out.C2, 3);
+  assert.equal(out.C3, 1);
+  assert.equal(out.C4, 1);
+  assert.equal(out.C5, 0);
+  assert.equal(out.C6, 1);
+  assert.equal(out.C7, 2);
+  assert.equal(out.C8, 0);
+  assert.equal(out.D2, 1);
+});
+
 test("SUMIF, COUNTIF, and AVERAGEIF accept a union criteria range", () => {
   const out = compute({
     A1: 1,

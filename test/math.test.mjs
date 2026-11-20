@@ -189,10 +189,10 @@ test("POWER matches Calc exponentiation", () => {
   assert.equal(out.A4, 1);
 });
 
-test("SQRT of a negative number is #VALUE!", () => {
+test("SQRT of a negative number is #NUM!", () => {
   const out = compute({ A1: "=SQRT(4)", A2: "=SQRT(-1)", A3: "=SQRT(0)" });
   assert.equal(out.A1, 2);
-  assert.deepEqual(out.A2, { error: "#VALUE!" });
+  assert.deepEqual(out.A2, { error: "#NUM!" });
   assert.equal(out.A3, 0);
 });
 

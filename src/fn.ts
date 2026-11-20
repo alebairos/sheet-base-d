@@ -407,7 +407,7 @@ function power(args: readonly Expr[], host: FnHost): Value {
 function sqrt(args: readonly Expr[], host: FnHost): Value {
   const n = oneNumber(args, host);
   if (n.kind === "error") return n;
-  if (n.n < 0) return { kind: "error", code: "#VALUE!" };
+  if (n.n < 0) return { kind: "error", code: "#NUM!" };
   return host.number(Math.sqrt(n.n));
 }
 

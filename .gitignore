@@ -4,3 +4,4 @@ dist/
 decisions.tsv
 .done-natural
 .done
+.audit/

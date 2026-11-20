@@ -134,6 +134,35 @@ test("literal formulas follow Calc precedence", () => {
   });
 });
 
+test("exact integers near 15 digits stay exact", () => {
+  const input = {
+    sheets: {
+      S: {
+        A1: "=999999999999999",
+        A2: "=999999999999998",
+        A3: "=10^15-1",
+        A4: "=1234567890123456",
+        A5: "=1234567890123456=1234567890123460",
+        A6: "=-999999999999999",
+      },
+    },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: {
+      S: {
+        A1: 999999999999999,
+        A2: 999999999999998,
+        A3: 999999999999999,
+        A4: 1234567890123456,
+        A5: false,
+        A6: -999999999999999,
+      },
+    },
+  });
+});
+
 test("comparisons return booleans", () => {
   const input = {
     sheets: {

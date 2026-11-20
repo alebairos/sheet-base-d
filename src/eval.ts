@@ -509,6 +509,7 @@ function finiteNumber(n: number): Value {
 
 function normalize(n: number): number {
   if (n === 0) return 0;
+  if (Number.isSafeInteger(n)) return n;
   const rounded = roundSig(n, 15);
   const nearest = Math.round(rounded);
   if (approxEqual(rounded, nearest) || approxEqual(nearest, rounded)) return nearest;
@@ -542,6 +543,7 @@ function roundSig(n: number, digits: number): number {
 
 function approxEqual(a: number, b: number): boolean {
   if (a === b) return true;
+  if (Number.isSafeInteger(a) && Number.isSafeInteger(b)) return false;
   const diff = a - b;
   const ad = diff < 0 ? -diff : diff;
   const scale = a < 0 ? -a : a;

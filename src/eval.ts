@@ -180,7 +180,7 @@ function intersectArg(left: Expr, right: Expr, ctx: EvalCtx): Arg {
   const row0 = Math.max(a.row0, b.row0);
   const col1 = Math.min(a.col1, b.col1);
   const row1 = Math.min(a.row1, b.row1);
-  if (col0 > col1 || row0 > row1) return { kind: "value", value: { kind: "error", code: "#VALUE!" } };
+  if (col0 > col1 || row0 > row1) return { kind: "value", value: { kind: "error", code: "#NULL!" } };
   return { kind: "range", sheet: a.sheet, col0, row0, col1, row1 };
 }
 

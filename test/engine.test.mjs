@@ -431,7 +431,7 @@ test("! between two ranges returns their overlap", () => {
   assert.equal(sheet.A4, 5);
   assert.equal(sheet.D2, 5);
   assert.deepEqual(sheet.E2, { error: "#VALUE!" });
-  assert.deepEqual(sheet.F1, { error: "#VALUE!" });
+  assert.deepEqual(sheet.F1, { error: "#NULL!" });
   assert.equal(sheet.G1, 9);
 });
 

@@ -504,6 +504,22 @@ const cases = [
     expect: { error: "#N/A" },
     note: "Calc VLOOKUP does not treat ß as equal to ss",
   },
+  {
+    id: "intersect-null",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "=A1:A2!C1:C2" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#NULL!" },
+    note: "Calc empty range intersection is #NULL!",
+  },
+  {
+    id: "space-intersect",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: 10, A2: 20, A3: 30, B1: "=A1:A3 A2" } } },
+    cell: "Sheet1!B1",
+    expect: 20,
+    note: "Calc space between refs is intersection",
+  },
 ];
 
 function runCase(c) {

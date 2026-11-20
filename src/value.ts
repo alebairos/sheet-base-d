@@ -5,6 +5,7 @@ export const ERROR_CODES = [
   "#NAME?",
   "#N/A",
   "#NUM!",
+  "#NULL!",
   "#CIRC!",
 ] as const;
 

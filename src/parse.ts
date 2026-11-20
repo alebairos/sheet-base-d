@@ -59,6 +59,7 @@ class Parser {
   private readonly src: string;
   private i = 0;
   private tok: Tok = { k: "eof" };
+  private spaced = false;
 
   constructor(src: string) {
     this.src = src;
@@ -80,7 +81,11 @@ class Parser {
   }
 
   private bump(): void {
-    while (isWs(this.ch())) this.i++;
+    this.spaced = false;
+    while (isWs(this.ch())) {
+      this.spaced = true;
+      this.i++;
+    }
     const c = this.ch();
     if (c === "") {
       this.tok = { k: "eof" };
@@ -428,7 +433,7 @@ class Parser {
   }
 
   private maybeRange(start: CellRef): Expr {
-    if (this.tok.k !== ":") return { kind: "ref", cell: start };
+    if (this.tok.k !== ":") return this.intersectMore({ kind: "ref", cell: start });
     this.bump();
     const end = this.parseRangeEnd();
     if (start.sheet !== null && end.sheet === null) end.sheet = start.sheet;
@@ -436,9 +441,21 @@ class Parser {
   }
 
   private intersectMore(left: Expr): Expr {
-    if (this.tok.k !== "!") return left;
-    this.bump();
-    return this.intersectMore({ kind: "intersect", left, right: this.parseIntersectSide() });
+    if (this.tok.k === "!") {
+      this.bump();
+      return this.intersectMore({ kind: "intersect", left, right: this.parseIntersectSide() });
+    }
+    if (this.spaced && this.startsIntersect()) {
+      return this.intersectMore({ kind: "intersect", left, right: this.parseIntersectSide() });
+    }
+    return left;
+  }
+
+  private startsIntersect(): boolean {
+    const k = this.tok.k;
+    if (k === "ref") return true;
+    if (k === "qsheet" || k === "id") return this.peekNonSpace() === "!";
+    return false;
   }
 
   private parseIntersectSide(): Expr {

@@ -85,7 +85,7 @@ test("MATCH descending returns the last equal value in a sorted column", () => {
   assert.equal(out.B2, 1);
   assert.equal(out.B3, 4);
   assert.deepEqual(out.B4, { error: "#N/A" });
-  assert.deepEqual(out.B5, { error: "#N/A" });
+  assert.equal(out.B5, 3);
 });
 
 test("MATCH text is case-insensitive, exact criteria are regex, and approximate uses text order", () => {
@@ -162,7 +162,7 @@ test("MATCH equates TRUE with 1 and numeric text with numbers only from the text
   assert.equal(out.H1, 1);
 });
 
-test("MATCH approximate on an unsorted column stops at the first larger value", () => {
+test("MATCH approximate on an unsorted column finds a later equal and otherwise stops at the first larger value", () => {
   const out = compute({
     A1: 5,
     A2: 1,
@@ -183,7 +183,7 @@ test("MATCH approximate on an unsorted column stops at the first larger value", 
     D3: "=MATCH(10,A1:A6,1)",
   }).Sheet1;
   assert.equal(out.B1, 2);
-  assert.deepEqual(out.B2, { error: "#N/A" });
+  assert.equal(out.B2, 2);
   assert.equal(out.B3, 3);
   assert.equal(out.B4, 1);
   assert.deepEqual(out.B5, { error: "#DIV/0!" });

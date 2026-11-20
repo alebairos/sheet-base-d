@@ -137,27 +137,25 @@ function findIndex(cells: readonly Value[], key: Value, mode: Mode): number | Er
 function scan(cells: readonly Value[], key: Value, mode: "asc" | "desc"): number | null {
   let loose: number | null = null;
   let equal: number | null = null;
-  let matched = false;
+  let ordered = true;
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
     if (cell === undefined) continue;
     const rank = rel(cell, key);
     if (rank === "skip") continue;
     if (rank === "stop") break;
+    if (rank === 0) {
+      equal = i;
+      continue;
+    }
+    if (!ordered) continue;
     if (mode === "asc") {
-      if (rank > 0) break;
-      if (rank === 0) equal = i;
+      if (rank > 0) ordered = false;
       else loose = i;
       continue;
     }
-    if (rank < 0) break;
-    if (rank === 0) {
-      equal = i;
-      matched = true;
-      continue;
-    }
-    if (matched) break;
-    loose = i;
+    if (rank < 0) ordered = false;
+    else loose = i;
   }
   return equal ?? loose;
 }

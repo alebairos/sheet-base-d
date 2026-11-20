@@ -1747,6 +1747,122 @@ const cases = [
     expect: 7,
     note: "canary: real sheet!cell still resolves",
   },
+  {
+    id: "match-true-text-vs-num",
+    pri: "P0",
+    book: { sheets: { Sheet1: { B1: 1, A1: '=MATCH("TRUE",B1:B1,0)' } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#N/A" },
+    note: "Calc exact MATCH of text TRUE does not hit number 1",
+  },
+  {
+    id: "match-false-text-vs-num",
+    pri: "P0",
+    book: { sheets: { Sheet1: { B1: 0, A1: '=MATCH("FALSE",B1:B1,0)' } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#N/A" },
+    note: "Calc exact MATCH of text FALSE does not hit number 0",
+  },
+  {
+    id: "match-true-text-before-bool",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: {
+          B1: 1,
+          B2: "TRUE",
+          B3: true,
+          A1: '=MATCH("TRUE",B1:B3,0)',
+        },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: 2,
+    note: "Calc exact MATCH of TRUE hits text before bool, skips 1",
+  },
+  {
+    id: "match-true-bool-before-text",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: {
+          B1: 1,
+          B2: true,
+          B3: "TRUE",
+          A1: '=MATCH("TRUE",B1:B3,0)',
+        },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: 2,
+    note: "Calc exact MATCH of TRUE hits bool before text, skips 1",
+  },
+  {
+    id: "vlookup-false-text",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: {
+          C1: 0,
+          D1: "num",
+          C2: "FALSE",
+          D2: "text",
+          C3: false,
+          D3: "bool",
+          A1: '=VLOOKUP("FALSE",C1:E3,2,FALSE)',
+        },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: "text",
+    note: "Calc exact VLOOKUP of FALSE hits text, skips 0",
+  },
+  {
+    id: "match-canary-bool-key",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: {
+          B1: 1,
+          B2: "TRUE",
+          B3: true,
+          A1: "=MATCH(TRUE,B1:B3,0)",
+        },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: 1,
+    note: "canary: boolean TRUE key still matches number 1",
+  },
+  {
+    id: "match-canary-true-approx",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: {
+          B1: 1,
+          B2: "TRUE",
+          B3: true,
+          A1: '=MATCH("TRUE",B1:B3,1)',
+        },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: 3,
+    note: "canary: approximate MATCH of TRUE still lands on bool",
+  },
+  {
+    id: "match-canary-true-lone-bool",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { B3: true, A1: '=MATCH("TRUE",B3:B3,0)' },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: 1,
+    note: "canary: exact MATCH of TRUE still matches a lone boolean",
+  },
 ];
 
 function runCase(c) {

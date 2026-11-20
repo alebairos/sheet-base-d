@@ -1,5 +1,6 @@
 import { asNumber, scalarRangeCell } from "./eval.js";
 import { oneArea, type Area, type Arg, type Fn, type FnHost } from "./fn.js";
+import { formatNumber } from "./numfmt.js";
 import { textOrder } from "./order.js";
 import type { Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
@@ -235,29 +236,43 @@ function exactAt(cell: Value, key: Value): boolean {
     const rendered = criteriaText(cell);
     return rendered !== null && criteriaMatch(key.t, rendered);
   }
-  const word = key.t.toUpperCase();
-  if (word === "TRUE" || word === "FALSE") return cell.kind === "bool" && cell.b === (word === "TRUE");
-  const parsed = textNum(key.t);
-  const cn = plainNum(cell);
-  return parsed !== null && cn !== null && near(cn, parsed);
+  if (isBoolWord(key.t)) return cell.kind === "bool" && cell.b === (key.t.toUpperCase() === "TRUE");
+  if (cell.kind !== "number") return false;
+  const parsed = canonicalNumericText(key.t);
+  return parsed !== null && near(cell.n, parsed);
 }
 
 function rel(cell: Value, key: Value): Rank {
   if (cell.kind === "blank") return "skip";
-  if (cell.kind === "error") return "stop";
   const kn = plainNum(key);
   if (kn !== null) {
+    if (cell.kind === "error") return "stop";
     if (cell.kind === "text") return "skip";
     const cn = plainNum(cell);
     if (cn === null) return "stop";
     return cmpNum(cn, kn);
   }
   if (key.kind !== "text") return "stop";
+  if (cell.kind === "error") return "skip";
   if (cell.kind === "text") return textOrder(cell.t, key.t);
-  const parsed = textNum(key.t);
-  const cn = plainNum(cell);
-  if (parsed === null || cn === null) return "stop";
-  return cmpNum(cn, parsed);
+  if (cell.kind === "bool" && isBoolWord(key.t)) {
+    const parsed = textNum(key.t);
+    const cn = plainNum(cell);
+    if (parsed === null || cn === null) return "stop";
+    return cmpNum(cn, parsed);
+  }
+  return "skip";
+}
+
+function isBoolWord(text: string): boolean {
+  const word = text.toUpperCase();
+  return word === "TRUE" || word === "FALSE";
+}
+
+function canonicalNumericText(text: string): number | null {
+  const n = textNum(text);
+  if (n === null || formatNumber(n) !== text) return null;
+  return n;
 }
 
 function plainNum(value: Value): number | null {

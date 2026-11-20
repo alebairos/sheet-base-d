@@ -605,3 +605,62 @@ test("MATCH and VLOOKUP accept an inline (?i) flag", () => {
   assert.equal(out.C2, 10);
   assert.deepEqual(out.C3, { error: "#N/A" });
 });
+
+test("exact MATCH and VLOOKUP accept only the canonical text of a number", () => {
+  const out = compute({
+    A1: 2,
+    B1: 10,
+    A2: "02",
+    B2: 50,
+    A3: -2,
+    A4: true,
+    C1: '=MATCH("2",A1,0)',
+    C2: '=MATCH("02",A1,0)',
+    C3: '=MATCH("02",A1:A2,0)',
+    C4: '=VLOOKUP("02",A1:B2,2,FALSE)',
+    C5: '=MATCH(" 2",A1,0)',
+    C6: '=MATCH("2e0",A1,0)',
+    C7: '=MATCH("-2",A3,0)',
+    C8: '=MATCH("1",A4,0)',
+  }).Sheet1;
+  assert.equal(out.C1, 1);
+  assert.deepEqual(out.C2, { error: "#N/A" });
+  assert.equal(out.C3, 2);
+  assert.equal(out.C4, 50);
+  assert.deepEqual(out.C5, { error: "#N/A" });
+  assert.deepEqual(out.C6, { error: "#N/A" });
+  assert.equal(out.C7, 1);
+  assert.deepEqual(out.C8, { error: "#N/A" });
+});
+
+test("approximate text lookup skips numbers and errors", () => {
+  const out = compute({
+    A1: 2,
+    B1: "num",
+    A2: 3,
+    A3: "2",
+    B3: "text",
+    A4: 1,
+    A5: "apple",
+    D1: "a",
+    D2: "=1/0",
+    D3: "b",
+    E1: 1,
+    E2: "=1/0",
+    E3: 3,
+    C1: '=MATCH("2",A1:A2,1)',
+    C2: '=MATCH("2",A1:A3,1)',
+    C3: '=VLOOKUP("2",A1:B3,2)',
+    C4: '=MATCH("TRUE",A4,1)',
+    C5: '=MATCH("apple",A4:A5,1)',
+    C6: '=MATCH("b",D1:D3,1)',
+    C7: "=MATCH(3,E1:E3,1)",
+  }).Sheet1;
+  assert.deepEqual(out.C1, { error: "#N/A" });
+  assert.equal(out.C2, 3);
+  assert.equal(out.C3, "text");
+  assert.deepEqual(out.C4, { error: "#N/A" });
+  assert.equal(out.C5, 2);
+  assert.equal(out.C6, 3);
+  assert.equal(out.C7, 1);
+});

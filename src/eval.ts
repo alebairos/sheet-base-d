@@ -470,15 +470,32 @@ function parseNumericText(raw: string): number | null {
   const word = t.toUpperCase();
   if (word === "TRUE") return 1;
   if (word === "FALSE") return 0;
-  const match = /^([+-])?\s*((?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*(%)?$/.exec(t);
+
+  let text = t;
+  let negative = false;
+  if (text.startsWith("(") && text.endsWith(")")) {
+    negative = true;
+    text = text.slice(1, -1).trim();
+  }
+  if (text.endsWith("$")) text = text.slice(0, -1);
+  if (text.startsWith("$")) {
+    text = text.slice(1);
+    if (text.startsWith(" ")) text = text.slice(1);
+  }
+
+  const match =
+    /^([+-]\s*)?((?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*(%)?$/.exec(
+      text,
+    );
   if (match === null) return null;
-  const sign = match[1] ?? "";
+  const sign = match[1]?.charAt(0) ?? "";
   const body = match[2];
   const percent = match[3];
   if (body === undefined) return null;
-  const n = Number(sign + body);
+  const n = Number(sign + body.replace(/,/g, ""));
   if (!Number.isFinite(n)) return null;
-  return percent === "%" ? n / 100 : n;
+  const scaled = percent === "%" ? n / 100 : n;
+  return negative ? -scaled : scaled;
 }
 
 function formatNumber(n: number): string {

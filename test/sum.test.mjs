@@ -42,6 +42,11 @@ test("SUM rejects text literals", () => {
   assert.deepEqual(out.B1, { error: "#VALUE!" });
 });
 
+test("SUM rejects a thousands-formatted text literal", () => {
+  const out = compute({ A1: '=SUM("1,000")' });
+  assert.deepEqual(out.A1, { error: "#VALUE!" });
+});
+
 test("SUM propagates the first error in a range", () => {
   const out = compute({ A1: 1, A2: { error: "#DIV/0!" }, A3: 3, B1: "=SUM(A1:A3)" });
   assert.deepEqual(out.B1, { error: "#DIV/0!" });

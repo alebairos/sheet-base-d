@@ -494,6 +494,50 @@ test("COUNTIF, SUMIF, and AVERAGEIF accept an inline (?i) flag", () => {
   assert.equal(out.C3, 1);
 });
 
+test("arithmetic coerces en-US formatted number text", () => {
+  const out = compute({
+    A1: '="12"+0',
+    A2: '="1e2"+0',
+    A3: '="12%"+0',
+    A4: '=" 12 "+0',
+    A5: '="1,000"+0',
+    A6: '="1,000.50"+0',
+    A7: '="$1000"+0',
+    A8: '="$ 1000"+0',
+    A9: '="1000$"+0',
+    A10: '="(1000)"+0',
+    A11: '="($1,000.25)"+0',
+    A12: '="$-1,000"+0',
+  });
+  assert.equal(out.A1, 12);
+  assert.equal(out.A2, 100);
+  assert.equal(out.A3, 0.12);
+  assert.equal(out.A4, 12);
+  assert.equal(out.A5, 1000);
+  assert.equal(out.A6, 1000.5);
+  assert.equal(out.A7, 1000);
+  assert.equal(out.A8, 1000);
+  assert.equal(out.A9, 1000);
+  assert.equal(out.A10, -1000);
+  assert.equal(out.A11, -1000.25);
+  assert.equal(out.A12, -1000);
+});
+
+test("arithmetic rejects malformed number text", () => {
+  const out = compute({
+    A1: '="1,5"+0',
+    A2: '="1,00"+0',
+    A3: '="€100"+0',
+    A4: '="1,2,3"+0',
+    A5: '="(1000"+0',
+  });
+  assert.deepEqual(out.A1, { error: "#VALUE!" });
+  assert.deepEqual(out.A2, { error: "#VALUE!" });
+  assert.deepEqual(out.A3, { error: "#VALUE!" });
+  assert.deepEqual(out.A4, { error: "#VALUE!" });
+  assert.deepEqual(out.A5, { error: "#VALUE!" });
+});
+
 test("STDEV is the sample standard deviation", () => {
   const out = compute({
     A1: "=STDEV(1,2,3)",

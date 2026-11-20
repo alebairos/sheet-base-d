@@ -500,6 +500,7 @@ function parseNumericText(raw: string): number | null {
     if (percent === "%" && (hadDollar || (negative && !percentOutside))) return null;
     if (scientific && (hadDollar || percent === "%")) return null;
     const n = Number(sign + body.replace(/,/g, ""));
+    if (n === Infinity || n === -Infinity) return Number.MAX_VALUE;
     if (!Number.isFinite(n)) return null;
     const scaled = percent === "%" ? n / 100 : n;
     return negative ? -scaled : scaled;

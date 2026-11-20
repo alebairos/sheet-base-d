@@ -88,6 +88,24 @@ test("MATCH descending returns the last equal value in a sorted column", () => {
   assert.equal(out.B5, 3);
 });
 
+test("MATCH and VLOOKUP do not treat ß as ss", () => {
+  const out = compute({
+    A1: "ss",
+    B1: 7,
+    A2: "ß",
+    C1: '=MATCH("ß",A1,0)',
+    C2: '=MATCH("ß",A1:A2,0)',
+    C3: '=MATCH("SS",A1,0)',
+    C4: '=VLOOKUP("ß",A1:B1,2,FALSE)',
+    C5: '=VLOOKUP("SS",A1:B1,2,FALSE)',
+  }).Sheet1;
+  assert.deepEqual(out.C1, { error: "#N/A" });
+  assert.equal(out.C2, 2);
+  assert.equal(out.C3, 1);
+  assert.deepEqual(out.C4, { error: "#N/A" });
+  assert.equal(out.C5, 7);
+});
+
 test("MATCH text is case-insensitive, exact criteria are regex, and approximate uses text order", () => {
   const out = compute({
     A1: "apple",

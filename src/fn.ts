@@ -2,7 +2,7 @@ import { asNumber, raise } from "./eval.js";
 import { logicFns } from "./logic.js";
 import { lookupFns } from "./lookup.js";
 import { textFns } from "./text.js";
-import { criteriaMatch, criteriaText } from "./wild.js";
+import { criteriaMatch, criteriaText, foldCriteria } from "./wild.js";
 import type { Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
 
@@ -669,7 +669,7 @@ function matchEmptyText(value: Value, op: "gt" | "ge" | "lt" | "le"): boolean {
 function matchNum(value: Value, crit: Extract<Crit, { kind: "num" }>): boolean {
   const n = value.kind === "number" ? value.n : value.kind === "bool" ? (value.b ? 1 : 0) : null;
   const textHit =
-    crit.textAlso && value.kind === "text" && value.t.toUpperCase() === crit.text.toUpperCase();
+    crit.textAlso && value.kind === "text" && foldCriteria(value.t) === foldCriteria(crit.text);
   const numHit = n !== null && near(n, crit.n);
   if (crit.op === "eq") return numHit || textHit;
   if (crit.op === "ne") return !(numHit || textHit);
@@ -695,8 +695,8 @@ function matchText(value: Value, crit: Extract<Crit, { kind: "text" }>): boolean
 }
 
 function textOrder(a: string, b: string): number {
-  const left = a.toUpperCase();
-  const right = b.toUpperCase();
+  const left = foldCriteria(a);
+  const right = foldCriteria(b);
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;

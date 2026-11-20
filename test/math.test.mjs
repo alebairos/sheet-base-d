@@ -364,6 +364,19 @@ test("MEDIAN picks the middle or the mean of the two middle numbers", () => {
   assert.deepEqual(out.B3, { error: "#VALUE!" });
 });
 
+test("COUNTIF does not treat ß as ss", () => {
+  const out = compute({
+    A1: "ss",
+    A2: "ß",
+    B1: '=COUNTIF(A1,"ß")',
+    B2: '=COUNTIF(A2,"ß")',
+    B3: '=COUNTIF(A1,"SS")',
+  });
+  assert.equal(out.B1, 0);
+  assert.equal(out.B2, 1);
+  assert.equal(out.B3, 1);
+});
+
 test("COUNTIF (?-i) matches one case and (?i) still matches all cases", () => {
   const out = compute({
     A1: "Apple",

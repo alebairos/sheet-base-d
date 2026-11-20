@@ -480,6 +480,30 @@ const cases = [
     expect: { error: "#N/A" },
     note: "Calc approximate MATCH of a between-key on unsorted rows is #N/A",
   },
+  {
+    id: "countif-eszett",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "ss", B1: '=COUNTIF(A1,"ß")' } } },
+    cell: "Sheet1!B1",
+    expect: 0,
+    note: "Calc COUNTIF does not treat ß as equal to ss",
+  },
+  {
+    id: "match-eszett",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "ss", B1: '=MATCH("ß",A1,0)' } } },
+    cell: "Sheet1!B1",
+    expect: { error: "#N/A" },
+    note: "Calc MATCH does not treat ß as equal to ss",
+  },
+  {
+    id: "vlookup-eszett",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "ss", B1: 7, C1: '=VLOOKUP("ß",A1:B1,2,FALSE)' } } },
+    cell: "Sheet1!C1",
+    expect: { error: "#N/A" },
+    note: "Calc VLOOKUP does not treat ß as equal to ss",
+  },
 ];
 
 function runCase(c) {

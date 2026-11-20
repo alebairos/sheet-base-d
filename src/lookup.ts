@@ -2,7 +2,7 @@ import { asNumber, scalarRangeCell } from "./eval.js";
 import type { Fn, FnHost } from "./fn.js";
 import type { Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
-import { criteriaMatch, criteriaText, isCriteriaRegex } from "./wild.js";
+import { criteriaMatch, criteriaText, foldCriteria, isCriteriaRegex } from "./wild.js";
 
 type Mode = "exact" | "asc" | "desc";
 type Grid = { sheet: string; c0: number; r0: number; c1: number; r1: number };
@@ -214,8 +214,8 @@ function cmpNum(left: number, right: number): -1 | 0 | 1 {
 }
 
 function cmpText(left: string, right: string): -1 | 0 | 1 {
-  const a = left.toUpperCase();
-  const b = right.toUpperCase();
+  const a = foldCriteria(left);
+  const b = foldCriteria(right);
   if (a === b) return 0;
   return a < b ? -1 : 1;
 }

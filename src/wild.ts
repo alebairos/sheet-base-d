@@ -19,13 +19,20 @@ export function criteriaText(value: Value): string | null {
   }
 }
 
+// JS toUpperCase expands ß to SS. Criteria leave ß unchanged, so it does not match ss.
+export function foldCriteria(text: string): string {
+  let out = "";
+  for (const ch of text) out += ch === "ß" ? ch : ch.toUpperCase();
+  return out;
+}
+
 export function criteriaMatch(pattern: string, text: string): boolean {
-  if (!isCriteriaRegex(pattern)) return text.toUpperCase() === pattern.toUpperCase();
+  if (!isCriteriaRegex(pattern)) return foldCriteria(text) === foldCriteria(pattern);
   const caseOff = pattern.includes("(?-i)");
   const body = pattern.replaceAll("(?-i)", "").replaceAll("(?i)", "");
   try {
     return new RegExp(`^(?:${body})$`, caseOff ? "u" : "iu").test(text);
   } catch {
-    return text.toUpperCase() === pattern.toUpperCase();
+    return foldCriteria(text) === foldCriteria(pattern);
   }
 }

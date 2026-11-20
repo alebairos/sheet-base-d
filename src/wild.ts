@@ -1,10 +1,7 @@
 export function hasWild(text: string): boolean {
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
-    if (c === "~") {
-      i += 1;
-      continue;
-    }
+    if (c === "~") return true;
     if (c === "*" || c === "?") return true;
   }
   return false;
@@ -30,6 +27,6 @@ export function wildRegExp(pat: string): RegExp {
 }
 
 function escapeReg(c: string): string {
-  if ("\\^$+?.()|[]{}".includes(c)) return `\\${c}`;
+  if ("\\^$*+?.()|[]{}".includes(c)) return `\\${c}`;
   return c;
 }

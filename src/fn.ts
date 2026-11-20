@@ -684,10 +684,13 @@ function matchText(value: Value, crit: Extract<Crit, { kind: "text" }>): boolean
     if (crit.op === "le") return cmp <= 0;
     return cmp >= 0;
   }
+  if (crit.wild !== null) {
+    if (value.kind !== "text") return crit.op === "ne";
+    const hit = crit.wild.test(value.t);
+    return crit.op === "eq" ? hit : !hit;
+  }
   const rendered = renderForCriteria(value);
-  const eq =
-    rendered !== null &&
-    (crit.wild !== null ? crit.wild.test(rendered) : rendered.toUpperCase() === crit.t.toUpperCase());
+  const eq = rendered !== null && rendered.toUpperCase() === crit.t.toUpperCase();
   return crit.op === "eq" ? eq : !eq;
 }
 

@@ -261,12 +261,16 @@ test("COUNTIF counts wildcard matches and blanks", () => {
     B3: '=COUNTIF(A4:A5,"")',
     B4: "=COUNTIF(A4:A5,0)",
     B5: '=COUNTIF(A4:A5,"=")',
+    C1: 123,
+    C2: "x",
+    D1: '=COUNTIF(C1:C2,"*")',
   });
   assert.equal(out.B1, 1);
   assert.equal(out.B2, 2);
   assert.equal(out.B3, 1);
   assert.equal(out.B4, 1);
   assert.equal(out.B5, 1);
+  assert.equal(out.D1, 1);
 });
 
 test("AVERAGEIF averages matches and returns #DIV/0! when none are numeric", () => {

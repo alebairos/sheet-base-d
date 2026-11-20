@@ -111,6 +111,17 @@ test("MATCH text is case-insensitive and approximate uses text order", () => {
   assert.equal(out.B7, 1);
 });
 
+test("MATCH tilde escapes a literal star and does not crash", () => {
+  const out = compute({
+    A1: "a*b",
+    A2: "ab",
+    B1: '=MATCH("a~*b",A1:A2,0)',
+    B2: '=MATCH("*~*",A1:A2,0)',
+  }).Sheet1;
+  assert.equal(out.B1, 1);
+  assert.deepEqual(out.B2, { error: "#N/A" });
+});
+
 test("MATCH equates TRUE with 1 and numeric text with numbers only from the text side", () => {
   const out = compute({
     A1: "1",

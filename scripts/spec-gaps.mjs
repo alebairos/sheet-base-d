@@ -119,6 +119,30 @@ const cases = [
     expect: { error: "#NUM!" },
     note: "Calc Err:502 for MID start < 1",
   },
+  {
+    id: "wild-crash",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: "ab", B1: '=MATCH("*~*",A1,0)' } } },
+    cell: "Sheet1!B1",
+    expect: { error: "#N/A" },
+    note: "escaped/trailing tilde must not throw Invalid regular expression",
+  },
+  {
+    id: "wild-escape",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "a*b", B1: '=MATCH("a~*b",A1,0)' } } },
+    cell: "Sheet1!B1",
+    expect: 1,
+    note: "~* is a literal star in Excel-style wildcards",
+  },
+  {
+    id: "crit-wild-num",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: 123, A2: "x", B1: '=COUNTIF(A1:A2,"*")' } } },
+    cell: "Sheet1!B1",
+    expect: 1,
+    note: "wildcard * matches text cells only, not numbers",
+  },
 ];
 
 function runCase(c) {

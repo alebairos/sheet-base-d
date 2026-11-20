@@ -224,7 +224,9 @@ class Parser {
       if (isDigit(this.ch())) {
         const digits = this.readDigits();
         if (digits === null) this.fail();
-        this.tok = { k: "row", row: rowIndex(digits) };
+        const row = rowIndex(digits);
+        if (this.hashBreaksRef()) this.fail();
+        this.tok = { k: "row", row };
         return;
       }
       const letters = this.readLetters();
@@ -297,13 +299,17 @@ class Parser {
     return this.src.slice(start, this.i);
   }
 
-  private emitRef(absCol: boolean, absRow: boolean, letters: string, digits: string): void {
-    // A1# and A1 # are syntax errors. A glued #REF! stays a name, as in A1#REF!.
+  // A1# and $1# are syntax errors. A glued #REF! stays a name, as in A1#REF!.
+  private hashBreaksRef(): boolean {
     let j = this.i;
     while (isWs(this.src[j] ?? "")) j++;
-    const hash = (this.src[j] ?? "") === "#";
+    if ((this.src[j] ?? "") !== "#") return false;
     const gluedRef = j === this.i && this.src.slice(j, j + 5).toUpperCase() === "#REF!";
-    if (hash && !gluedRef) this.fail();
+    return !gluedRef;
+  }
+
+  private emitRef(absCol: boolean, absRow: boolean, letters: string, digits: string): void {
+    if (this.hashBreaksRef()) this.fail();
     const addr = cellAddr(letters, digits);
     if (addr === null) throw new NameFail();
     this.tok = { k: "ref", absCol, absRow, col: addr.col, row: addr.row };
@@ -459,7 +465,7 @@ class Parser {
       if (isRowNum(tok.n) && this.peekNonSpace() === ":") {
         const row = tok.n - 1;
         this.bump();
-        return this.unionMore(this.intersectMore(this.finishRowRange(null, row)));
+        return this.unionMore(this.intersectMore(this.finishRowRange(null, row, false)));
       }
       this.bump();
       return { kind: "number", n: tok.n };
@@ -468,7 +474,7 @@ class Parser {
       const row = tok.row;
       this.bump();
       const expr =
-        this.tok.k === ":" ? this.finishRowRange(null, row) : this.rowSpan(null, row, row);
+        this.tok.k === ":" ? this.finishRowRange(null, row, true) : this.rowSpan(null, row, row);
       return this.unionMore(this.intersectMore(expr));
     }
     if (tok.k === "col") {
@@ -560,7 +566,7 @@ class Parser {
     }
     if (tok.k === "row") {
       this.bump();
-      const expr = this.tok.k === ":" ? this.finishRowRange(sheet, tok.row) : this.rowSpan(sheet, tok.row, tok.row);
+      const expr = this.tok.k === ":" ? this.finishRowRange(sheet, tok.row, true) : this.rowSpan(sheet, tok.row, tok.row);
       return this.intersectMore(expr);
     }
     if (tok.k === "id" && isColName(tok.name) && this.peekNonSpace() === ":") {
@@ -571,7 +577,7 @@ class Parser {
     if (tok.k === "num" && isRowNum(tok.n) && this.peekNonSpace() === ":") {
       const row = tok.n - 1;
       this.bump();
-      return this.intersectMore(this.finishRowRange(sheet, row));
+      return this.intersectMore(this.finishRowRange(sheet, row, false));
     }
     if (this.tok.k !== "ref") return this.brokenName();
     const start = this.takeRef(sheet);
@@ -650,13 +656,13 @@ class Parser {
     }
     if (tok.k === "row") {
       this.bump();
-      const expr = this.tok.k === ":" ? this.finishRowRange(null, tok.row) : this.rowSpan(null, tok.row, tok.row);
+      const expr = this.tok.k === ":" ? this.finishRowRange(null, tok.row, true) : this.rowSpan(null, tok.row, tok.row);
       return this.intersectMore(expr);
     }
     if (tok.k === "num" && isRowNum(tok.n) && this.peekNonSpace() === ":") {
       const row = tok.n - 1;
       this.bump();
-      return this.intersectMore(this.finishRowRange(null, row));
+      return this.intersectMore(this.finishRowRange(null, row, false));
     }
     if (tok.k === "id") {
       const name = tok.name;
@@ -734,10 +740,10 @@ class Parser {
     return this.colSpan(sheet, col, this.takeCol());
   }
 
-  private finishRowRange(sheet: string | null, row: number): Expr {
+  private finishRowRange(sheet: string | null, row: number, absStart: boolean): Expr {
     if (this.tok.k !== ":") this.fail();
     this.bump();
-    return this.rowSpan(sheet, row, this.takeRow());
+    return this.rowSpan(sheet, row, this.takeRow(absStart));
   }
 
   private takeCol(): number {
@@ -754,13 +760,15 @@ class Parser {
     throw new NameFail();
   }
 
-  private takeRow(): number {
+  private takeRow(absStart: boolean): number {
     const tok = this.tok;
     if (tok.k === "row") {
       this.bump();
       return tok.row;
     }
     if (tok.k === "num" && isRowNum(tok.n)) {
+      // $1:2# is a syntax error. 1:2# stays a name. A glued #REF! stays a name.
+      if (absStart && this.hashBreaksRef()) this.fail();
       this.bump();
       return tok.n - 1;
     }

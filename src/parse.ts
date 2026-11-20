@@ -214,10 +214,9 @@ class Parser {
   }
 
   private emitRef(absCol: boolean, absRow: boolean, letters: string, digits: string): void {
-    const col = columnIndex(letters);
-    const row = Number(digits);
-    if (col === null || !Number.isSafeInteger(row) || row < 1) this.fail();
-    this.tok = { k: "ref", absCol, absRow, col, row: row - 1 };
+    const addr = cellAddr(letters, digits);
+    if (addr === null) throw new NameFail();
+    this.tok = { k: "ref", absCol, absRow, col: addr.col, row: addr.row };
   }
 
   private readOp(): void {
@@ -382,7 +381,7 @@ class Parser {
       if (this.tok.k === "!") return this.unionMore(this.parseAnchoredRef(name));
       const upper = name.toUpperCase();
       if (upper === "TRUE" || upper === "FALSE") return { kind: "bool", b: upper === "TRUE" };
-      this.fail();
+      throw new NameFail();
     }
     if (tok.k === "ref") {
       const cell = this.cellFrom(tok, null);
@@ -479,7 +478,7 @@ class Parser {
       const name = tok.name;
       this.bump();
       if (this.tok.k === "!") return this.parseAnchoredRef(name);
-      this.fail();
+      throw new NameFail();
     }
     if (tok.k === "ref") {
       const cell = this.cellFrom(tok, null);
@@ -541,11 +540,14 @@ class Parser {
 }
 
 const MAX_COL = 16383;
+const MAX_ROW = 1048576;
 
 function cellAddr(letters: string, digits: string): { col: number; row: number } | null {
   const col = columnIndex(letters);
   const row = Number(digits);
-  if (col === null || col > MAX_COL || !Number.isSafeInteger(row) || row < 1) return null;
+  if (col === null || col > MAX_COL || !Number.isSafeInteger(row) || row < 1 || row > MAX_ROW) {
+    return null;
+  }
   return { col, row: row - 1 };
 }
 

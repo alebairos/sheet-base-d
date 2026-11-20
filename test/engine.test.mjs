@@ -361,7 +361,7 @@ test("coercion, concatenation, references, and unknown functions", () => {
         A9: { error: "#NAME?" },
         A10: 5,
         A11: 5,
-        A12: { error: "#REF!" },
+        A12: { error: "#NAME?" },
         A13: { error: "#VALUE!" },
         A14: { error: "#N/A" },
         A15: 'say "hi"',
@@ -574,7 +574,7 @@ test("ranges used as values follow Calc", () => {
       Row: { A1: 10, B1: 20, C1: 30, D1: { error: "#VALUE!" }, B2: 20 },
       RowSelf: { A1: 10, B1: { error: "#CIRC!" }, C1: 30 },
       Area: { A1: { error: "#VALUE!" }, B2: 0 },
-      Cross: { A1: 5, B1: { error: "#REF!" }, C1: 5 },
+      Cross: { A1: 5, B1: { error: "#NAME?" }, C1: 5 },
       Sheet2: { A1: 5 },
     },
   });

@@ -146,9 +146,16 @@ function scalarExpr(expr: Expr, ctx: EvalCtx): Value {
   if (!("code" in area)) return scalarRect(area, ctx);
   if (expr.kind === "range") {
     const own = arg.areas.find((item) => item.sheet === ctx.sheet);
-    if (own !== undefined) return scalarRect(own, ctx);
+    if (own !== undefined) return scalarSheetSpan(own, ctx);
   }
   return area;
+}
+
+function scalarSheetSpan(rect: Area, ctx: EvalCtx): Value {
+  const oneCell = rect.col0 === rect.col1 && rect.row0 === rect.row1;
+  const sharesAxis = ctx.col === rect.col0 || ctx.row === rect.row0;
+  if (oneCell && !sharesAxis) return { kind: "error", code: "#VALUE!" };
+  return scalarRect(rect, ctx);
 }
 
 function evalArg(expr: Expr, ctx: EvalCtx): Arg {

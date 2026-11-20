@@ -764,6 +764,19 @@ const cases = [
     expect: 3,
     note: "Calc AVERAGEIF accepts a ~ union",
   },
+  {
+    id: "scalar-3d-offaxis",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A1: 3, B3: "=Sheet1!A1:Sheet2!A1" },
+        Sheet2: { A1: 4 },
+      },
+    },
+    cell: "Sheet1!B3",
+    expect: { error: "#VALUE!" },
+    note: "Calc scalar sheet-span needs shared row or column with the formula cell",
+  },
 ];
 
 function runCase(c) {

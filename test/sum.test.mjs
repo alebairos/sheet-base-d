@@ -120,6 +120,23 @@ test("SUM repeats the rectangle on each sheet of a span", () => {
   assert.equal(sheets.Sheet1.A1, 10);
 });
 
+test("a one-cell sheet span is #VALUE! off both its row and its column", () => {
+  const sheets = computeBook({
+    sheets: {
+      Sheet1: {
+        A1: 3,
+        B1: "=Sheet1!A1:Sheet2!A1",
+        A2: "=Sheet1!A1:Sheet2!A1",
+        B3: "=Sheet1!A1:Sheet2!A1",
+      },
+      Sheet2: { A1: 4 },
+    },
+  });
+  assert.equal(sheets.Sheet1.B1, 3);
+  assert.equal(sheets.Sheet1.A2, 3);
+  assert.deepEqual(sheets.Sheet1.B3, { error: "#VALUE!" });
+});
+
 test("a sheet span used as a scalar is the formula sheet rectangle", () => {
   const sheets = computeBook({
     sheets: {

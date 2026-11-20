@@ -100,13 +100,15 @@ test("MATCH text is case-insensitive and approximate uses text order", () => {
     B4: '=MATCH("ap*",A1:A4,0)',
     B5: "=MATCH(3,A1:B2,0)",
     B6: "=MATCH(1,5,0)",
+    B7: '=MATCH("ap?le",A1:A4,0)',
   }).Sheet1;
   assert.equal(out.B1, 1);
   assert.equal(out.B2, 3);
   assert.deepEqual(out.B3, { error: "#N/A" });
-  assert.deepEqual(out.B4, { error: "#N/A" });
+  assert.equal(out.B4, 1);
   assert.deepEqual(out.B5, { error: "#VALUE!" });
   assert.deepEqual(out.B6, { error: "#VALUE!" });
+  assert.equal(out.B7, 1);
 });
 
 test("MATCH equates TRUE with 1 and numeric text with numbers only from the text side", () => {

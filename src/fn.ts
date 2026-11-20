@@ -2,6 +2,7 @@ import { asNumber, raise } from "./eval.js";
 import { logicFns } from "./logic.js";
 import { lookupFns } from "./lookup.js";
 import { textFns } from "./text.js";
+import { hasWild, wildRegExp } from "./wild.js";
 import type { Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
 
@@ -719,42 +720,6 @@ function textOrder(a: string, b: string): number {
 function numText(n: number): string {
   if (n === 0) return "0";
   return String(n);
-}
-
-function hasWild(text: string): boolean {
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (c === "~") {
-      i += 1;
-      continue;
-    }
-    if (c === "*" || c === "?") return true;
-  }
-  return false;
-}
-
-function wildRegExp(pat: string): RegExp {
-  let src = "^";
-  for (let i = 0; i < pat.length; i++) {
-    const c = pat[i] ?? "";
-    if (c === "~") {
-      const n = pat[i + 1];
-      if (n === "*" || n === "?" || n === "~") {
-        src += escapeReg(n);
-        i += 1;
-        continue;
-      }
-    }
-    if (c === "*") src += "[\\s\\S]*";
-    else if (c === "?") src += "[\\s\\S]";
-    else src += escapeReg(c);
-  }
-  return new RegExp(`${src}$`, "i");
-}
-
-function escapeReg(c: string): string {
-  if ("\\^$+?.()|[]{}".includes(c)) return `\\${c}`;
-  return c;
 }
 
 function near(a: number, b: number): boolean {

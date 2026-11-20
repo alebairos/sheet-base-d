@@ -5759,6 +5759,38 @@ const cases = [
     expect: { error: "#NAME?" },
     note: "canary: SUM of a letter name stays #NAME?",
   },
+  {
+    id: "letter-hash",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "=ABC#" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#VALUE!" },
+    note: "a hash glued to a letter name is a syntax error, exported as #VALUE!",
+  },
+  {
+    id: "letter-hash-digit",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "=ABC#2" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#VALUE!" },
+    note: "a hash and a digit glued to a letter name stay a syntax error",
+  },
+  {
+    id: "hash-bare",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "=#" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#NAME?" },
+    note: "canary: a leading hash stays #NAME?",
+  },
+  {
+    id: "hash-after-num",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "=1#" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#NAME?" },
+    note: "canary: a hash after a number stays #NAME?",
+  },
 ];
 
 function runCase(c) {

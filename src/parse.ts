@@ -256,6 +256,8 @@ class Parser {
       return;
     }
     while (isNameChar(this.ch())) this.i++;
+    // ABC# is a syntax error. A hash that starts a token, as in 1#2, stays a name.
+    if (this.ch() === "#") this.fail();
     this.tok = { k: "id", name: this.src.slice(start, this.i) };
   }
 

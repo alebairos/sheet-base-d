@@ -370,6 +370,21 @@ test("MEDIAN picks the middle or the mean of the two middle numbers", () => {
   assert.deepEqual(out.B3, { error: "#VALUE!" });
 });
 
+test("COUNTIF counts both sides of a collation tie for <= and >=", () => {
+  const out = compute({
+    A1: "i\u0301",
+    A2: "\u00ed",
+    B1: '=COUNTIF(A1:A2,">=\u00ed")',
+    B2: '=COUNTIF(A1:A2,"<\u00ed")',
+    B3: '=COUNTIF(A1:A2,">\u00ed")',
+    B4: '=COUNTIF(A1:A2,"<=\u00ed")',
+  });
+  assert.equal(out.B1, 2);
+  assert.equal(out.B2, 0);
+  assert.equal(out.B3, 0);
+  assert.equal(out.B4, 2);
+});
+
 test("COUNTIF greater-than counts letters after an accented letter", () => {
   const out = compute({
     A1: "f",

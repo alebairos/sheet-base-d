@@ -1067,6 +1067,54 @@ const cases = [
     expect: 1,
     note: "Calc descending MATCH keeps the first equal and ignores one after a greater value",
   },
+  {
+    id: "cmp-nfd-lt-nfc",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '="i\u0301"<"í"' } } },
+    cell: "Sheet1!A1",
+    expect: false,
+    note: "Calc collation ties: NFD i+acute is not less than NFC í",
+  },
+  {
+    id: "cmp-nfd-ge-nfc",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '="i\u0301">="í"' } } },
+    cell: "Sheet1!A1",
+    expect: true,
+    note: "Calc collation ties: NFD >= NFC is true while = stays false",
+  },
+  {
+    id: "cmp-nfd-eq-nfc",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '="i\u0301"="í"' } } },
+    cell: "Sheet1!A1",
+    expect: false,
+    note: "Calc equality stays code-point exact across NFD/NFC",
+  },
+  {
+    id: "countif-nfd-ge",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A1: "i\u0301", A2: "í", B1: '=COUNTIF(A1:A2,">=í")' },
+      },
+    },
+    cell: "Sheet1!B1",
+    expect: 2,
+    note: "Calc COUNTIF >= counts both NFD and NFC when they collation-tie",
+  },
+  {
+    id: "countif-nfd-lt",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A1: "i\u0301", A2: "í", B1: '=COUNTIF(A1:A2,"<í")' },
+      },
+    },
+    cell: "Sheet1!B1",
+    expect: 0,
+    note: "Calc COUNTIF < counts neither form when they collation-tie",
+  },
 ];
 
 function runCase(c) {

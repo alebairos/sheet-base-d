@@ -231,6 +231,41 @@ test("accented letters sort with their base letter and stay unequal to it", () =
   });
 });
 
+test("a collation tie is neither less nor greater and is not equal", () => {
+  const nfd = "i\u0301";
+  const nfc = "\u00ed";
+  const input = {
+    sheets: {
+      Sheet1: {
+        A1: `="${nfd}"<"${nfc}"`,
+        A2: `="${nfc}"<"${nfd}"`,
+        A3: `="${nfd}">"${nfc}"`,
+        A4: `="${nfc}">"${nfd}"`,
+        A5: `="${nfd}"<="${nfc}"`,
+        A6: `="${nfd}">="${nfc}"`,
+        A7: `="${nfd}"="${nfc}"`,
+        A8: `="${nfd}"<>"${nfc}"`,
+      },
+    },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: {
+      Sheet1: {
+        A1: false,
+        A2: false,
+        A3: false,
+        A4: false,
+        A5: true,
+        A6: true,
+        A7: false,
+        A8: true,
+      },
+    },
+  });
+});
+
 test("an unclosed string or a bare hash is #NAME?", () => {
   const input = {
     sheets: {

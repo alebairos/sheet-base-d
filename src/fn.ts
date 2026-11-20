@@ -2,7 +2,7 @@ import { asNumber, raise } from "./eval.js";
 import { logicFns } from "./logic.js";
 import { lookupFns } from "./lookup.js";
 import { formatNumber } from "./numfmt.js";
-import { textOrder } from "./order.js";
+import { textCollation } from "./order.js";
 import { textFns } from "./text.js";
 import { criteriaMatch, criteriaText, foldCriteria } from "./wild.js";
 import type { Expr } from "./parse.js";
@@ -716,7 +716,7 @@ function matchNum(value: Value, crit: Extract<Crit, { kind: "num" }>): boolean {
 function matchText(value: Value, crit: Extract<Crit, { kind: "text" }>): boolean {
   if (crit.op === "lt" || crit.op === "gt" || crit.op === "le" || crit.op === "ge") {
     if (value.kind !== "text") return false;
-    const cmp = textOrder(value.t, crit.t);
+    const cmp = textCollation(value.t, crit.t);
     if (crit.op === "lt") return cmp < 0;
     if (crit.op === "gt") return cmp > 0;
     if (crit.op === "le") return cmp <= 0;

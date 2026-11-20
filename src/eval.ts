@@ -1,7 +1,7 @@
 import { parseA1 } from "./addr.js";
 import { lookupFn, oneArea, type Area, type Arg, type FnHost } from "./fn.js";
 import { formatNumber } from "./numfmt.js";
-import { textOrder } from "./order.js";
+import { textCollation } from "./order.js";
 import { parseFormula, type BinOp, type CellRef, type Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
 import type { InputCell, Workbook } from "./workbook.js";
@@ -350,6 +350,12 @@ function concat(left: Value, right: Value): Value {
 }
 
 function compare(op: "=" | "<>" | "<" | ">" | "<=" | ">=", left: Value, right: Value): Value {
+  if (left.kind === "blank" && right.kind === "text") left = { kind: "text", t: "" };
+  if (right.kind === "blank" && left.kind === "text") right = { kind: "text", t: "" };
+  if ((op === "=" || op === "<>") && left.kind === "text" && right.kind === "text") {
+    const same = left.t === right.t;
+    return { kind: "bool", b: op === "=" ? same : !same };
+  }
   const ord = order(left, right);
   if (ord.kind === "error") return ord;
   const c = ord.n;
@@ -382,10 +388,8 @@ function compare(op: "=" | "<>" | "<" | ">" | "<=" | ">=", left: Value, right: V
 }
 
 function order(left: Value, right: Value): NumOrErr {
-  if (left.kind === "blank" && right.kind === "text") left = { kind: "text", t: "" };
-  if (right.kind === "blank" && left.kind === "text") right = { kind: "text", t: "" };
   if (left.kind === "text" && right.kind === "text") {
-    return { kind: "number", n: textOrder(left.t, right.t) };
+    return { kind: "number", n: textCollation(left.t, right.t) };
   }
   if (left.kind === "text") return { kind: "number", n: 1 };
   if (right.kind === "text") return { kind: "number", n: -1 };

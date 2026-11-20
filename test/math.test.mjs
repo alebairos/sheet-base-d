@@ -416,6 +416,59 @@ test("COUNTIF greater-than counts letters after an accented letter", () => {
   assert.equal(out.B1, 1);
 });
 
+test("COUNTIF word and digit classes use Unicode properties", () => {
+  const out = compute({
+    A1: "é",
+    A2: "中",
+    A3: "１",
+    A4: "٢",
+    A5: "\u0301",
+    A6: "\u203F",
+    A7: "abc",
+    A8: "4",
+    A9: " ",
+    A10: "😀",
+    B1: '=COUNTIF(A1,"\\w+")',
+    B2: '=COUNTIF(A2,"\\w+")',
+    B3: '=COUNTIF(A3,"\\w+")',
+    B4: '=COUNTIF(A3,"\\d+")',
+    B5: '=COUNTIF(A4,"\\d+")',
+    B6: '=COUNTIF(A1,"[\\w]+")',
+    B7: '=COUNTIF(A3,"[\\d]+")',
+    B8: '=COUNTIF(A1,"\\W+")',
+    B9: '=COUNTIF(A3,"\\D+")',
+    B10: '=COUNTIF(A9,"[\\W]+")',
+    C1: '=COUNTIF(A1,"[\\W]+")',
+    C2: '=COUNTIF(A3,"[\\D]+")',
+    C3: '=COUNTIF(A1,"[\\D]+")',
+    C4: '=COUNTIF(A5,"\\w+")',
+    C5: '=COUNTIF(A6,"\\w+")',
+    C6: '=COUNTIF(A7,"\\w+")',
+    C7: '=COUNTIF(A8,"\\d+")',
+    C8: '=COUNTIF(A9,"\\W+")',
+    C9: '=COUNTIF(A10,"\\w+")',
+  });
+  assert.equal(out.B1, 1);
+  assert.equal(out.B2, 1);
+  assert.equal(out.B3, 1);
+  assert.equal(out.B4, 1);
+  assert.equal(out.B5, 1);
+  assert.equal(out.B6, 1);
+  assert.equal(out.B7, 1);
+  assert.equal(out.B8, 0);
+  assert.equal(out.B9, 0);
+  assert.equal(out.B10, 1);
+  assert.equal(out.C1, 0);
+  assert.equal(out.C2, 0);
+  assert.equal(out.C3, 1);
+  assert.equal(out.C4, 1);
+  assert.equal(out.C5, 1);
+  assert.equal(out.C6, 1);
+  assert.equal(out.C7, 1);
+  assert.equal(out.C8, 1);
+  assert.equal(out.C9, 0);
+});
+
 test("COUNTIF does not treat ß as ss", () => {
   const out = compute({
     A1: "ss",

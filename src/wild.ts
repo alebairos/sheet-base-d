@@ -79,7 +79,7 @@ function readSeq(scan: Scan, stop: boolean, mode: Mode): string | null {
     buf = "";
   };
   while (scan.i < scan.src.length) {
-    const escaped = takeEscape(scan, mode);
+    const escaped = takeEscape(scan, mode, false);
     if (escaped !== null) {
       buf += escaped;
       continue;
@@ -95,7 +95,7 @@ function readSeq(scan: Scan, stop: boolean, mode: Mode): string | null {
     }
     if (c === "[") {
       scan.i++;
-      buf += c + readClass(scan, mode);
+      buf += readClass(scan, mode);
       continue;
     }
     if (c === "(" && scan.src[scan.i + 1] === "?") {
@@ -190,7 +190,7 @@ function readClass(scan: Scan, mode: Mode): string {
   let primed = false;
   let afterCaret = false;
   while (scan.i < scan.src.length) {
-    const escaped = takeEscape(scan, mode);
+    const escaped = takeEscape(scan, mode, true);
     if (escaped !== null) {
       body += escaped;
       primed = true;
@@ -207,7 +207,7 @@ function readClass(scan: Scan, mode: Mode): string {
       continue;
     }
     scan.i++;
-    if (c === "]" && primed && !afterCaret) return body + c;
+    if (c === "]" && primed && !afterCaret) return finishClass(body);
     body += c;
     if (c === "^" && !primed) {
       primed = true;
@@ -217,10 +217,25 @@ function readClass(scan: Scan, mode: Mode): string {
     primed = true;
     afterCaret = false;
   }
-  return body;
+  return `[${body.split(WORD_COMP).join("\\W")}`;
 }
 
-function takeEscape(scan: Scan, mode: Mode): string | null {
+// Calc \d and \w use Unicode properties. A pure \W class is the complement of that set.
+// A class that also lists other characters keeps ASCII \W. JS u-mode cannot spell that union.
+const WORD_PROPS = "\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}";
+const WORD_COMP = "\uE000";
+
+function finishClass(body: string): string {
+  const negated = body.startsWith("^");
+  const core = negated ? body.slice(1) : body;
+  const parts = core.split(WORD_COMP);
+  const rest = parts.join("");
+  if (parts.length === 1) return `${negated ? "[^" : "["}${core}]`;
+  if (rest === "") return negated ? `[${WORD_PROPS}]` : `[^${WORD_PROPS}]`;
+  return `${negated ? "[^" : "["}${rest}\\W]`;
+}
+
+function takeEscape(scan: Scan, mode: Mode, inClass: boolean): string | null {
   if (scan.src[scan.i] !== "\\") return null;
   const next = scan.src[scan.i + 1];
   if (next === undefined) {
@@ -230,6 +245,14 @@ function takeEscape(scan: Scan, mode: Mode): string | null {
   scan.i += 2;
   // Unicode regex rejects an escaped space. In (?x) that escape is a literal space or hash.
   if (mode.x && (FREE_SPACE.has(next) || next === "#")) return next;
+  return unicodeClassEscape(next, inClass);
+}
+
+function unicodeClassEscape(next: string, inClass: boolean): string {
+  if (next === "d") return "\\p{Nd}";
+  if (next === "D") return "\\P{Nd}";
+  if (next === "w") return inClass ? WORD_PROPS : `[${WORD_PROPS}]`;
+  if (next === "W") return inClass ? WORD_COMP : `[^${WORD_PROPS}]`;
   return `\\${next}`;
 }
 

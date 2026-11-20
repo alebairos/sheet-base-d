@@ -14,15 +14,15 @@ const cases = [
   {
     id: "blank-eq-empty",
     pri: "P1",
-    book: { sheets: { Sheet1: { A1: "=B1=\"\"" } } },
+    book: { sheets: { Sheet1: { A1: '=B1=""' } } },
     cell: "Sheet1!A1",
     expect: true,
-    note: "SPEC blank as \"\"; Calc blank=\"\" is TRUE",
+    note: "SPEC blank as empty text; Calc blank=\"\" is TRUE",
   },
   {
     id: "blank-ne-empty",
     pri: "P1",
-    book: { sheets: { Sheet1: { A1: "=B1<>\"\"" } } },
+    book: { sheets: { Sheet1: { A1: '=B1<>""' } } },
     cell: "Sheet1!A1",
     expect: false,
     note: "blank<>\"\" is FALSE in Calc",
@@ -73,7 +73,51 @@ const cases = [
     book: { sheets: { Sheet1: { A1: 1 } } },
     cell: "Missing!A1",
     expect: { error: "#REF!" },
-    note: "CLI --cell missing sheet; README #REF! (Calc shows #NAME?)",
+    note: "CLI --cell missing sheet; README #REF!",
+  },
+  {
+    id: "cmp-case",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: '="A"="a"' } } },
+    cell: "Sheet1!A1",
+    expect: false,
+    note: "Calc comparison operators are case-sensitive (IgnoreCase false)",
+  },
+  {
+    id: "match-wild",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "apple", A2: "apricot", B1: '=MATCH("a*",A1:A2,0)' } } },
+    cell: "Sheet1!B1",
+    expect: 1,
+    note: "Calc exact MATCH supports * and ?",
+  },
+  {
+    id: "vlookup-wild",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A1: "apple", B1: 10, A2: "apricot", B2: 20, C1: '=VLOOKUP("a*",A1:B2,2,FALSE)' },
+      },
+    },
+    cell: "Sheet1!C1",
+    expect: 10,
+    note: "Calc exact VLOOKUP supports * and ?",
+  },
+  {
+    id: "left-neg",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '=LEFT("ab",-1)' } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#NUM!" },
+    note: "Calc Err:502 for negative LEFT count",
+  },
+  {
+    id: "mid-start0",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '=MID("ab",0,1)' } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#NUM!" },
+    note: "Calc Err:502 for MID start < 1",
   },
 ];
 
@@ -100,7 +144,9 @@ for (const c of cases) {
   const { ok, got } = runCase(c);
   if (!ok) {
     fail += 1;
-    console.log(`FAIL ${c.pri} ${c.id}: got=${JSON.stringify(got)} expect=${JSON.stringify(c.expect)} (${c.note})`);
+    console.log(
+      `FAIL ${c.pri} ${c.id}: got=${JSON.stringify(got)} expect=${JSON.stringify(c.expect)} (${c.note})`,
+    );
   }
 }
 

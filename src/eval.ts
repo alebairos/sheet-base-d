@@ -328,10 +328,8 @@ function order(left: Value, right: Value): NumOrErr {
   if (left.kind === "blank" && right.kind === "text") left = { kind: "text", t: "" };
   if (right.kind === "blank" && left.kind === "text") right = { kind: "text", t: "" };
   if (left.kind === "text" && right.kind === "text") {
-    const a = left.t.toUpperCase();
-    const b = right.t.toUpperCase();
-    if (a < b) return { kind: "number", n: -1 };
-    if (a > b) return { kind: "number", n: 1 };
+    if (left.t < right.t) return { kind: "number", n: -1 };
+    if (left.t > right.t) return { kind: "number", n: 1 };
     return { kind: "number", n: 0 };
   }
   if (left.kind === "text") return { kind: "number", n: 1 };

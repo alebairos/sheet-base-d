@@ -35,6 +35,7 @@ export type FnHost = {
   cell(sheet: string, col: number, row: number): Value;
   number(n: number): Value;
   scalar(expr: Expr): Value;
+  sheet: string;
   col: number;
   row: number;
 };

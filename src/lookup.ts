@@ -135,7 +135,7 @@ function pick(grid: Grid, row: number, col: number, host: FnHost): Value {
   let c1 = grid.c1;
   if (row !== 0) r0 = r1 = grid.r0 + row - 1;
   if (col !== 0) c0 = c1 = grid.c0 + col - 1;
-  const hit = scalarRangeCell(c0, r0, c1, r1, host.col, host.row);
+  const hit = scalarRangeCell(c0, r0, c1, r1, host.col, host.row, grid.sheet === host.sheet);
   if (hit === null) return err("#VALUE!");
   return host.cell(grid.sheet, hit.col, hit.row);
 }

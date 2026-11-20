@@ -135,6 +135,7 @@ function evalCall(name: string, args: readonly Expr[], ctx: EvalCtx): Value {
     cell: (sheet, col, row) => computeCell(ctx, sheet, col, row),
     number: finiteNumber,
     scalar: (expr) => scalarExpr(expr, ctx),
+    sheet: ctx.sheet,
     col: ctx.col,
     row: ctx.row,
   };
@@ -242,7 +243,15 @@ function rectArg(expr: Expr, ctx: EvalCtx): Arg {
 }
 
 function scalarRect(rect: Area, ctx: EvalCtx): Value {
-  const hit = scalarRangeCell(rect.col0, rect.row0, rect.col1, rect.row1, ctx.col, ctx.row);
+  const hit = scalarRangeCell(
+    rect.col0,
+    rect.row0,
+    rect.col1,
+    rect.row1,
+    ctx.col,
+    ctx.row,
+    rect.sheet === ctx.sheet,
+  );
   if (hit === null) return { kind: "error", code: "#VALUE!" };
   return computeCell(ctx, rect.sheet, hit.col, hit.row);
 }
@@ -254,11 +263,12 @@ export function scalarRangeCell(
   r2: number,
   col: number,
   row: number,
+  blockOwnColumn: boolean,
 ): { col: number; row: number } | null {
   if (c1 === c2 && r1 === r2) return { col: c1, row: r1 };
   if (c1 !== c2 && r1 !== r2) return null;
   if (c1 === c2) {
-    if (col === c1 || row < r1 || row > r2) return null;
+    if ((blockOwnColumn && col === c1) || row < r1 || row > r2) return null;
     return { col: c1, row };
   }
   if (col < c1 || col > c2) return null;

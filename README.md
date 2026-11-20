@@ -28,6 +28,6 @@ Numbers, strings, and booleans pass through. A string that starts with `=` is a 
 
 The engine calculates every formula cell in dependency order and reuses the result. A circular reference is `{"error":"#CIRC!"}`.
 
-A range used as one value follows Calc. `=A1:A1` is that cell. A single column uses the cell on the formula's row, from a formula in another column. A formula in that same column is `{"error":"#VALUE!"}`. A single row uses the cell on the formula's column when that column is inside the range. A range with more than one row and more than one column, such as `=A1:B6`, is `{"error":"#VALUE!"}`.
+A range used as one value follows Calc. `=A1:A1` is that cell. A single column uses the cell on the formula's row. A formula in that column on the same sheet is `{"error":"#VALUE!"}`. That column on another sheet still uses the formula's row. A single row uses the cell on the formula's column when that column is inside the range. A range with more than one row and more than one column, such as `=A1:B6`, is `{"error":"#VALUE!"}`.
 
 `./engine <file|-> --cell Sheet1!A1` prints one cell as JSON. Dependencies of that formula are calculated too. A missing cell prints `null`. A missing sheet prints `{"error":"#REF!"}`.

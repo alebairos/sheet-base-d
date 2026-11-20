@@ -2512,6 +2512,87 @@ const cases = [
     expect: { error: "#VALUE!" },
     note: "canary: a missing-end column range still #VALUE! when the formula row is outside it",
   },
+  {
+    id: "xsheet-own-col",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A2: "=Sheet2!A1:A3" },
+        Sheet2: { A1: 1, A2: 2, A3: 3 },
+      },
+    },
+    cell: "Sheet1!A2",
+    expect: 2,
+    note: "Calc intersects another sheet's column with the formula row even in that column",
+  },
+  {
+    id: "xsheet-own-col-index",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A2: "=INDEX(Sheet2!A1:A3,0)" },
+        Sheet2: { A1: 1, A2: 2, A3: 3 },
+      },
+    },
+    cell: "Sheet1!A2",
+    expect: 2,
+    note: "Calc INDEX row 0 on another sheet's column uses the formula row in that column",
+  },
+  {
+    id: "xsheet-own-row",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { B2: "=Sheet2!A2:C2" },
+        Sheet2: { A2: 2, B2: 21, C2: 31 },
+      },
+    },
+    cell: "Sheet1!B2",
+    expect: 21,
+    note: "canary: another sheet's row still intersects the formula column",
+  },
+  {
+    id: "xsheet-col-outside",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A5: "=Sheet2!A1:A3" },
+        Sheet2: { A1: 1, A2: 2, A3: 3 },
+      },
+    },
+    cell: "Sheet1!A5",
+    expect: { error: "#VALUE!" },
+    note: "canary: a column range stays #VALUE! when the formula row is outside it",
+  },
+  {
+    id: "xsheet-col-other",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { B2: "=Sheet2!A1:A3" },
+        Sheet2: { A1: 1, A2: 2, A3: 3 },
+      },
+    },
+    cell: "Sheet1!B2",
+    expect: 2,
+    note: "canary: a column range from another column still uses the formula row",
+  },
+  {
+    id: "self-col-scalar",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: 10, A2: "=A1:A3", A3: 30 } } },
+    cell: "Sheet1!A2",
+    expect: { error: "#VALUE!" },
+    note: "canary: a formula in its own column does not intersect that column",
+  },
+  {
+    id: "index-own-col",
+    pri: "P1",
+    book: { sheets: { Sheet1: { C1: 41, C2: "=INDEX(C1:C3,0)", C3: 43 } } },
+    cell: "Sheet1!C2",
+    expect: { error: "#VALUE!" },
+    note: "canary: INDEX row 0 in the formula column stays #VALUE!",
+  },
 ];
 
 function runCase(c) {

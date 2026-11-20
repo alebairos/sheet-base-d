@@ -286,6 +286,12 @@ class Parser {
   }
 
   private emitRef(absCol: boolean, absRow: boolean, letters: string, digits: string): void {
+    // A1# and A1 # are syntax errors. A glued #REF! stays a name, as in A1#REF!.
+    let j = this.i;
+    while (isWs(this.src[j] ?? "")) j++;
+    const hash = (this.src[j] ?? "") === "#";
+    const gluedRef = j === this.i && this.src.slice(j, j + 5).toUpperCase() === "#REF!";
+    if (hash && !gluedRef) this.fail();
     const addr = cellAddr(letters, digits);
     if (addr === null) throw new NameFail();
     this.tok = { k: "ref", absCol, absRow, col: addr.col, row: addr.row };

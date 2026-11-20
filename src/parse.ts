@@ -50,6 +50,8 @@ type Tok =
 
 class ParseFail extends Error {}
 
+class TrailingOp extends ParseFail {}
+
 class Parser {
   private readonly src: string;
   private i = 0;
@@ -254,6 +256,7 @@ class Parser {
     while (this.tok.k === "op" && isComp(this.tok.op)) {
       const op = this.tok.op;
       this.bump();
+      this.requireOperand();
       const right = this.parseConcat();
       left = { kind: "binary", op, left, right };
     }
@@ -264,6 +267,7 @@ class Parser {
     let left = this.parseAdd();
     while (this.tok.k === "op" && this.tok.op === "&") {
       this.bump();
+      this.requireOperand();
       const right = this.parseAdd();
       left = { kind: "binary", op: "&", left, right };
     }
@@ -275,6 +279,7 @@ class Parser {
     while (this.tok.k === "op" && (this.tok.op === "+" || this.tok.op === "-")) {
       const op = this.tok.op;
       this.bump();
+      this.requireOperand();
       const right = this.parseMul();
       left = { kind: "binary", op, left, right };
     }
@@ -286,6 +291,7 @@ class Parser {
     while (this.tok.k === "op" && (this.tok.op === "*" || this.tok.op === "/")) {
       const op = this.tok.op;
       this.bump();
+      this.requireOperand();
       const right = this.parsePow();
       left = { kind: "binary", op, left, right };
     }
@@ -296,6 +302,7 @@ class Parser {
     let left = this.parseUnary();
     while (this.tok.k === "op" && this.tok.op === "^") {
       this.bump();
+      this.requireOperand();
       const right = this.parseUnary();
       left = { kind: "binary", op: "^", left, right };
     }
@@ -306,11 +313,28 @@ class Parser {
     if (this.tok.k === "op" && (this.tok.op === "+" || this.tok.op === "-")) {
       const op = this.tok.op;
       this.bump();
+      this.requireOperand();
       const arg = this.parseUnary();
       if (op === "+") return arg;
       return { kind: "unary", op: "-", arg };
     }
     return this.parsePostfix();
+  }
+
+  private requireOperand(): void {
+    const tok = this.tok;
+    if (
+      tok.k === "num" ||
+      tok.k === "str" ||
+      tok.k === "(" ||
+      tok.k === "qsheet" ||
+      tok.k === "id" ||
+      tok.k === "ref" ||
+      (tok.k === "op" && (tok.op === "+" || tok.op === "-"))
+    ) {
+      return;
+    }
+    throw new TrailingOp();
   }
 
   private parsePostfix(): Expr {
@@ -463,12 +487,17 @@ function isNameChar(c: string): boolean {
   return isLetter(c) || isDigit(c) || c === "_" || c === ".";
 }
 
-export function parseFormula(src: string): Expr | null {
-  if (!src.startsWith("=")) return null;
+export type ParsedFormula =
+  | { kind: "expr"; expr: Expr }
+  | { kind: "error"; code: "#VALUE!" | "#N/A" };
+
+export function parseFormula(src: string): ParsedFormula {
+  if (!src.startsWith("=")) return { kind: "error", code: "#VALUE!" };
   try {
-    return new Parser(src.slice(1)).parse();
+    return { kind: "expr", expr: new Parser(src.slice(1)).parse() };
   } catch (err) {
-    if (err instanceof ParseFail) return null;
+    if (err instanceof TrailingOp) return { kind: "error", code: "#N/A" };
+    if (err instanceof ParseFail) return { kind: "error", code: "#VALUE!" };
     throw err;
   }
 }

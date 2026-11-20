@@ -185,6 +185,21 @@ test("AND and OR evaluate every argument", () => {
   assert.deepEqual(out.B2, { error: "#DIV/0!" });
 });
 
+test("TRUE and FALSE reject extra arguments", () => {
+  const out = compute({
+    A1: "=TRUE()",
+    A2: "=FALSE()",
+    A3: "=TRUE(1)",
+    A4: "=FALSE(1)",
+    A5: "=TRUE(1,2)",
+  });
+  assert.equal(out.A1, true);
+  assert.equal(out.A2, false);
+  assert.deepEqual(out.A3, { error: "#VALUE!" });
+  assert.deepEqual(out.A4, { error: "#VALUE!" });
+  assert.deepEqual(out.A5, { error: "#VALUE!" });
+});
+
 test("NOT inverts a logical value", () => {
   const out = compute({
     A1: "=NOT(TRUE)",

@@ -74,13 +74,8 @@ export function computeCell(ctx: EvalCtx, sheet: string, col: number, row: numbe
     return input;
   }
   ctx.visiting.add(key);
-  const expr = parseFormula(input.src);
-  const value =
-    expr === null
-      ? ({ kind: "error", code: "#VALUE!" } satisfies Value)
-      : evalExpr(expr, { ...ctx, sheet, col, row });
+  const stored = evalFormula(input.src, { ...ctx, sheet, col, row });
   ctx.visiting.delete(key);
-  const stored = formulaResult(value);
   ctx.cache.set(key, stored);
   return stored;
 }
@@ -92,9 +87,13 @@ function formulaResult(value: Value): Value {
 
 export function evalUnindexed(ctx: EvalCtx, sheet: string, cell: InputCell): Value {
   if (cell.kind !== "formula") return cell;
-  const expr = parseFormula(cell.src);
-  if (expr === null) return { kind: "error", code: "#VALUE!" };
-  return formulaResult(evalExpr(expr, { ...ctx, sheet, col: -1, row: -1 }));
+  return evalFormula(cell.src, { ...ctx, sheet, col: -1, row: -1 });
+}
+
+function evalFormula(src: string, ctx: EvalCtx): Value {
+  const parsed = parseFormula(src);
+  if (parsed.kind === "error") return parsed;
+  return formulaResult(evalExpr(parsed.expr, ctx));
 }
 
 export function evalExpr(expr: Expr, ctx: EvalCtx): Value {

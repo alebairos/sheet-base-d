@@ -12,6 +12,8 @@ export const logicFns = {
   AND: (args, host) => foldLogic(args, host, "and"),
   OR: (args, host) => foldLogic(args, host, "or"),
   NOT: notFn,
+  TRUE: (args) => boolConst(args, true),
+  FALSE: (args) => boolConst(args, false),
   ISBLANK: (args, host) => classify(args, host, (value) => value.kind === "blank"),
   ISNUMBER: (args, host) => classify(args, host, (value) => value.kind === "number" || value.kind === "bool"),
   ISTEXT: (args, host) => classify(args, host, (value) => value.kind === "text"),
@@ -43,6 +45,11 @@ function ifError(args: readonly Expr[], host: FnHost): Value {
   const value = host.scalar(valueExpr);
   if (value.kind === "error") return host.scalar(fallback);
   return value;
+}
+
+function boolConst(args: readonly Expr[], b: boolean): Value {
+  if (args.length !== 0) return { kind: "error", code: "#VALUE!" };
+  return { kind: "bool", b };
 }
 
 function notFn(args: readonly Expr[], host: FnHost): Value {

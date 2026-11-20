@@ -283,8 +283,9 @@ function counta(args: readonly Expr[], host: FnHost): Value {
 
 function extreme(args: readonly Expr[], host: FnHost, mode: "min" | "max"): Value {
   if (args.length === 0) return { kind: "error", code: "#VALUE!" };
-  const state: { best: { n: number; value: Value } | null; error: Value | null } = {
-    best: null,
+  const state: { n: number | null; cellBool: boolean; error: Value | null } = {
+    n: null,
+    cellBool: false,
     error: null,
   };
   visit(args, host, (value, fromRange) => {
@@ -299,24 +300,27 @@ function extreme(args: readonly Expr[], host: FnHost, mode: "min" | "max"): Valu
       }
       return true;
     }
-    const taken = extremeValue(value, fromRange);
-    if (taken === null) return true;
-    const best = state.best;
-    if (best === null || (mode === "min" ? lower(taken.n, best.n) : lower(best.n, taken.n))) {
-      state.best = taken;
+    const n = extremeValue(value, fromRange);
+    if (n === null) return true;
+    if (state.n === null) {
+      state.n = n;
+      state.cellBool = value.kind === "bool" && fromRange;
+      return true;
     }
+    if (mode === "min" ? lower(n, state.n) : lower(state.n, n)) state.n = n;
     return true;
   });
   if (state.error) return state.error;
-  const chosen = state.best;
-  if (chosen === null) return host.number(0);
-  return chosen.value;
+  const n = state.n;
+  if (n === null) return host.number(0);
+  if (state.cellBool && (n === 0 || n === 1)) return { kind: "bool", b: n === 1 };
+  return { kind: "number", n };
 }
 
-function extremeValue(value: Value, fromRange: boolean): { n: number; value: Value } | null {
-  if (value.kind === "number") return { n: value.n, value };
-  if (value.kind === "bool") return { n: value.b ? 1 : 0, value };
-  if (value.kind === "blank" && !fromRange) return { n: 0, value: { kind: "number", n: 0 } };
+function extremeValue(value: Value, fromRange: boolean): number | null {
+  if (value.kind === "number") return value.n;
+  if (value.kind === "bool") return value.b ? 1 : 0;
+  if (value.kind === "blank" && !fromRange) return 0;
   return null;
 }
 

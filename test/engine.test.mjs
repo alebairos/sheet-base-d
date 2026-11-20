@@ -196,6 +196,7 @@ test("coercion, concatenation, references, and unknown functions", () => {
         A15: '="say ""hi"""',
         A16: "=1+A1",
         A17: "=FOO(1/0)",
+        A18: "=1+2)",
       },
     },
   };
@@ -217,10 +218,11 @@ test("coercion, concatenation, references, and unknown functions", () => {
         A11: 5,
         A12: { error: "#REF!" },
         A13: { error: "#VALUE!" },
-        A14: { error: "#VALUE!" },
+        A14: { error: "#N/A" },
         A15: 'say "hi"',
         A16: 6,
         A17: { error: "#NAME?" },
+        A18: { error: "#VALUE!" },
       },
     },
   });

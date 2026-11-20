@@ -82,6 +82,46 @@ test("MIN keeps the first value when a boolean ties a number", () => {
   assert.equal(out.B4, 0);
 });
 
+test("MIN and MAX of boolean literals return numbers", () => {
+  const out = compute({
+    A1: "=MIN(TRUE,FALSE)",
+    A2: "=MAX(TRUE,FALSE)",
+    A3: "=MIN(TRUE)",
+    A4: "=MAX(FALSE,-1)",
+    A5: "=MIN(TRUE(),FALSE())",
+    A6: "=MAX(FALSE(),-1)",
+  });
+  assert.equal(out.A1, 0);
+  assert.equal(out.A2, 1);
+  assert.equal(out.A3, 1);
+  assert.equal(out.A4, 0);
+  assert.equal(out.A5, 0);
+  assert.equal(out.A6, 0);
+});
+
+test("MIN and MAX keep a boolean when the first value is a boolean cell and the result is 0 or 1", () => {
+  const out = compute({
+    A1: "=TRUE()",
+    B1: "=FALSE()",
+    C1: "=MIN(A1)",
+    C2: "=MIN(A1:B1)",
+    C3: "=MIN(A1,0)",
+    C4: "=MAX(B1,1)",
+    C5: "=MIN(2,B1)",
+    C6: "=MIN(TRUE,B1)",
+    C7: "=MIN(A1,-5)",
+    C8: "=MAX(B1,5)",
+  });
+  assert.equal(out.C1, true);
+  assert.equal(out.C2, false);
+  assert.equal(out.C3, false);
+  assert.equal(out.C4, true);
+  assert.equal(out.C5, 0);
+  assert.equal(out.C6, 0);
+  assert.equal(out.C7, -5);
+  assert.equal(out.C8, 5);
+});
+
 test("COUNT counts numbers and booleans, not text cells", () => {
   const out = compute({
     A1: 1,

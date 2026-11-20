@@ -473,9 +473,8 @@ class Parser {
       if (this.tok.k === "!") return this.unionMore(this.parseAnchoredRef(name));
       const upper = name.toUpperCase();
       if (upper === "TRUE" || upper === "FALSE") return { kind: "bool", b: upper === "TRUE" };
-      if (/^[A-Za-z]{1,3}\d+[A-Za-z_.]/.test(name)) return { kind: "name" };
-      if (isDigit(name[0] ?? "") || name[0] === ".") return { kind: "name" };
-      throw new NameFail();
+      // Hello, 1.2a, and .5.5 are names. The operator after one is parsed, so a missing operand is Err:520.
+      return { kind: "name" };
     }
     if (tok.k === "ref") {
       const cell = this.cellFrom(tok, null);

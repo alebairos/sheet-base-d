@@ -175,6 +175,23 @@ test("UPPER and LOWER change case", () => {
   assert.deepEqual(out.A11, { error: "#VALUE!" });
 });
 
+test("UPPER maps sharp s to capital sharp s and LOWER keeps dotted I", () => {
+  const out = compute({
+    A1: '=UPPER("\u00DF")',
+    A2: '=LOWER("\u0130")',
+    A3: '=UPPER("Stra\u00DFe")',
+    A4: '=LOWER("A\u0130B")',
+    A5: '=LOWER("\u1E9E")',
+    A6: '=LOWER("\u0391\u03A3")',
+  });
+  assert.equal(out.A1, "\u1E9E");
+  assert.equal(out.A2, "\u0130");
+  assert.equal(out.A3, "STRA\u1E9EE");
+  assert.equal(out.A4, "a\u0130b");
+  assert.equal(out.A5, "\u00DF");
+  assert.equal(out.A6, "\u03B1\u03C2");
+});
+
 test("TRIM drops outer spaces and collapses inner spaces", () => {
   const out = compute({
     A1: "  a   b  ",

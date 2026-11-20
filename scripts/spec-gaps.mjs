@@ -630,6 +630,22 @@ const cases = [
     expect: 3,
     note: "Calc scalar use of a one-cell sheet span returns that cell on the formula sheet",
   },
+  {
+    id: "upper-eszett",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '=UPPER("ß")' } } },
+    cell: "Sheet1!A1",
+    expect: "ẞ",
+    note: "Calc UPPER(ß) is capital sharp S U+1E9E, not SS",
+  },
+  {
+    id: "lower-i-dot",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '=LOWER("İ")' } } },
+    cell: "Sheet1!A1",
+    expect: "İ",
+    note: "Calc LOWER(İ) leaves U+0130 unchanged",
+  },
 ];
 
 function runCase(c) {

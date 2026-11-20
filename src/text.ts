@@ -12,8 +12,8 @@ export const textFns = {
   RIGHT: right,
   MID: mid,
   LEN: len,
-  UPPER: (args, host) => mapText(args, host, (text) => text.toUpperCase()),
-  LOWER: (args, host) => mapText(args, host, (text) => text.toLowerCase()),
+  UPPER: (args, host) => mapText(args, host, upperText),
+  LOWER: (args, host) => mapText(args, host, lowerText),
   TRIM: (args, host) => mapText(args, host, trimSpaces),
 } satisfies { readonly [name: string]: Fn };
 
@@ -69,6 +69,43 @@ function len(args: readonly Expr[], host: FnHost): Value {
   const text = oneText(args, host);
   if (text.kind === "error") return text;
   return host.number(Array.from(text.t).length);
+}
+
+// JS toUpperCase expands ß to SS. Calc maps it to ẞ.
+const CALC_UPPER: Readonly<Record<string, string>> = { "\u00DF": "\u1E9E" };
+
+// JS toLowerCase expands İ to i + U+0307. Calc leaves it.
+const CALC_LOWER: Readonly<Record<string, string>> = { "\u0130": "\u0130" };
+
+function upperText(text: string): string {
+  return mapCase(text, (part) => part.toUpperCase(), CALC_UPPER);
+}
+
+function lowerText(text: string): string {
+  return mapCase(text, (part) => part.toLowerCase(), CALC_LOWER);
+}
+
+function mapCase(
+  text: string,
+  convert: (part: string) => string,
+  points: Readonly<Record<string, string>>,
+): string {
+  let out = "";
+  let run = "";
+  for (const ch of text) {
+    const mapped = points[ch];
+    if (mapped === undefined) {
+      run += ch;
+      continue;
+    }
+    if (run !== "") {
+      out += convert(run);
+      run = "";
+    }
+    out += mapped;
+  }
+  if (run !== "") out += convert(run);
+  return out;
 }
 
 function mapText(args: readonly Expr[], host: FnHost, fn: (text: string) => string): Value {

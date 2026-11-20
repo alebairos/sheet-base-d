@@ -32,7 +32,8 @@ export type Expr =
   | { kind: "call"; name: string; args: Expr[] }
   | { kind: "ref"; cell: CellRef }
   | { kind: "range"; start: CellRef; end: CellRef }
-  | { kind: "intersect"; left: Expr; right: Expr };
+  | { kind: "intersect"; left: Expr; right: Expr }
+  | { kind: "union"; left: Expr; right: Expr };
 
 type Tok =
   | { k: "num"; n: number }
@@ -47,6 +48,7 @@ type Tok =
   | { k: "," }
   | { k: ":" }
   | { k: "!" }
+  | { k: "~" }
   | { k: "eof" };
 
 class ParseFail extends Error {}
@@ -242,7 +244,7 @@ class Parser {
       this.tok = { k: "pct" };
       return;
     }
-    if (c === "(" || c === ")" || c === "," || c === ":" || c === "!") {
+    if (c === "(" || c === ")" || c === "," || c === ":" || c === "!" || c === "~") {
       this.tok = { k: c };
       return;
     }
@@ -376,13 +378,13 @@ class Parser {
     }
     if (tok.k === "qsheet") {
       this.bump();
-      return this.parseAnchoredRef(tok.name);
+      return this.unionMore(this.parseAnchoredRef(tok.name));
     }
     if (tok.k === "id") {
       const name = tok.name;
       this.bump();
       if (this.tok.k === "(") return this.parseCall(name);
-      if (this.tok.k === "!") return this.parseAnchoredRef(name);
+      if (this.tok.k === "!") return this.unionMore(this.parseAnchoredRef(name));
       const upper = name.toUpperCase();
       if (upper === "TRUE" || upper === "FALSE") return { kind: "bool", b: upper === "TRUE" };
       this.fail();
@@ -390,7 +392,7 @@ class Parser {
     if (tok.k === "ref") {
       const cell = this.cellFrom(tok, null);
       this.bump();
-      return this.maybeRange(cell);
+      return this.unionMore(this.maybeRange(cell));
     }
     this.fail();
   }
@@ -438,6 +440,12 @@ class Parser {
     const end = this.parseRangeEnd();
     if (start.sheet !== null && end.sheet === null) end.sheet = start.sheet;
     return this.intersectMore({ kind: "range", start, end });
+  }
+
+  private unionMore(left: Expr): Expr {
+    if (this.tok.k !== "~") return left;
+    this.bump();
+    return this.unionMore({ kind: "union", left, right: this.parseIntersectSide() });
   }
 
   private intersectMore(left: Expr): Expr {

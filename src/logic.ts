@@ -98,13 +98,15 @@ function logicArg(expr: Expr, host: FnHost): Bits {
   const arg = host.arg(expr);
   if (arg.kind === "value") return logicValue(arg.value);
   const values: boolean[] = [];
-  for (let row = arg.row0; row <= arg.row1; row++) {
-    for (let col = arg.col0; col <= arg.col1; col++) {
-      const cell = host.cell(arg.sheet, col, row);
-      if (cell.kind === "error") return cell;
-      const bit = logicCell(cell);
-      if (bit === "skip") continue;
-      values.push(bit);
+  for (const area of arg.areas) {
+    for (let row = area.row0; row <= area.row1; row++) {
+      for (let col = area.col0; col <= area.col1; col++) {
+        const cell = host.cell(area.sheet, col, row);
+        if (cell.kind === "error") return cell;
+        const bit = logicCell(cell);
+        if (bit === "skip") continue;
+        values.push(bit);
+      }
     }
   }
   return { kind: "bits", values };

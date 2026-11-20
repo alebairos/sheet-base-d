@@ -1,5 +1,5 @@
 import { asNumber, scalarRangeCell } from "./eval.js";
-import type { Fn, FnHost } from "./fn.js";
+import { oneArea, type Fn, type FnHost } from "./fn.js";
 import type { Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
 import { criteriaMatch, criteriaText, foldCriteria, isCriteriaRegex } from "./wild.js";
@@ -245,9 +245,9 @@ function column(grid: Grid, col: number, host: FnHost): Value[] {
 }
 
 function gridOf(expr: Expr, host: FnHost, missing: ErrorCode): Grid | Err {
-  const arg = host.arg(expr);
-  if (arg.kind === "range") return { sheet: arg.sheet, c0: arg.col0, r0: arg.row0, c1: arg.col1, r1: arg.row1 };
-  return arg.value.kind === "error" ? arg.value : err(missing);
+  const area = oneArea(host.arg(expr), missing);
+  if ("code" in area) return area;
+  return { sheet: area.sheet, c0: area.col0, r0: area.row0, c1: area.col1, r1: area.row1 };
 }
 
 function modeOf(value: Value): Mode | Err {

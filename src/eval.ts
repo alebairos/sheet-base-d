@@ -1,5 +1,5 @@
 import { parseA1 } from "./addr.js";
-import { lookupFn, type Arg, type FnHost } from "./fn.js";
+import { lookupFn, oneArea, type Area, type Arg, type FnHost } from "./fn.js";
 import { parseFormula, type BinOp, type CellRef, type Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
 import type { InputCell, Workbook } from "./workbook.js";
@@ -116,6 +116,7 @@ export function evalExpr(expr: Expr, ctx: EvalCtx): Value {
       return evalRef(expr.cell, ctx);
     case "range":
     case "intersect":
+    case "union":
       return scalarExpr(expr, ctx);
     default: {
       const exhaustive: never = expr;
@@ -141,11 +142,20 @@ function evalCall(name: string, args: readonly Expr[], ctx: EvalCtx): Value {
 function scalarExpr(expr: Expr, ctx: EvalCtx): Value {
   const arg = evalArg(expr, ctx);
   if (arg.kind === "value") return arg.value;
-  return scalarRect(arg, ctx);
+  const area = oneArea(arg);
+  if ("code" in area) return area;
+  return scalarRect(area, ctx);
 }
 
 function evalArg(expr: Expr, ctx: EvalCtx): Arg {
-  if (expr.kind === "ref" || expr.kind === "range" || expr.kind === "intersect") return rectArg(expr, ctx);
+  if (
+    expr.kind === "ref" ||
+    expr.kind === "range" ||
+    expr.kind === "intersect" ||
+    expr.kind === "union"
+  ) {
+    return rectArg(expr, ctx);
+  }
   return { kind: "value", value: evalExpr(expr, ctx) };
 }
 
@@ -153,15 +163,21 @@ function rangeArg(start: CellRef, end: CellRef, ctx: EvalCtx): Arg {
   const sheetA = resolveSheet(ctx, start.sheet);
   const sheetB = resolveSheet(ctx, end.sheet);
   if (sheetA === null || sheetB === null) return { kind: "value", value: { kind: "error", code: "#REF!" } };
-  if (sheetA !== sheetB) return { kind: "value", value: { kind: "error", code: "#VALUE!" } };
-  return {
-    kind: "range",
-    sheet: sheetA,
-    col0: Math.min(start.col, end.col),
-    row0: Math.min(start.row, end.row),
-    col1: Math.max(start.col, end.col),
-    row1: Math.max(start.row, end.row),
-  };
+  const names = Object.keys(ctx.workbook.sheets);
+  const i = names.indexOf(sheetA);
+  const j = names.indexOf(sheetB);
+  const col0 = Math.min(start.col, end.col);
+  const row0 = Math.min(start.row, end.row);
+  const col1 = Math.max(start.col, end.col);
+  const row1 = Math.max(start.row, end.row);
+  const areas: Area[] = names.slice(Math.min(i, j), Math.max(i, j) + 1).map((sheet) => ({
+    sheet,
+    col0,
+    row0,
+    col1,
+    row1,
+  }));
+  return { kind: "areas", areas };
 }
 
 function evalRef(cell: CellRef, ctx: EvalCtx): Value {
@@ -171,27 +187,36 @@ function evalRef(cell: CellRef, ctx: EvalCtx): Value {
 }
 
 function intersectArg(left: Expr, right: Expr, ctx: EvalCtx): Arg {
-  const a = rectArg(left, ctx);
-  if (a.kind === "value") return a;
-  const b = rectArg(right, ctx);
-  if (b.kind === "value") return b;
+  const a = oneArea(rectArg(left, ctx));
+  if ("code" in a) return { kind: "value", value: a };
+  const b = oneArea(rectArg(right, ctx));
+  if ("code" in b) return { kind: "value", value: b };
   if (a.sheet !== b.sheet) return { kind: "value", value: { kind: "error", code: "#VALUE!" } };
   const col0 = Math.max(a.col0, b.col0);
   const row0 = Math.max(a.row0, b.row0);
   const col1 = Math.min(a.col1, b.col1);
   const row1 = Math.min(a.row1, b.row1);
   if (col0 > col1 || row0 > row1) return { kind: "value", value: { kind: "error", code: "#NULL!" } };
-  return { kind: "range", sheet: a.sheet, col0, row0, col1, row1 };
+  return { kind: "areas", areas: [{ sheet: a.sheet, col0, row0, col1, row1 }] };
+}
+
+function unionArg(left: Expr, right: Expr, ctx: EvalCtx): Arg {
+  const a = rectArg(left, ctx);
+  if (a.kind === "value") return a;
+  const b = rectArg(right, ctx);
+  if (b.kind === "value") return b;
+  return { kind: "areas", areas: a.areas.concat(b.areas) };
 }
 
 function rectArg(expr: Expr, ctx: EvalCtx): Arg {
   if (expr.kind === "ref") return rangeArg(expr.cell, expr.cell, ctx);
   if (expr.kind === "range") return rangeArg(expr.start, expr.end, ctx);
   if (expr.kind === "intersect") return intersectArg(expr.left, expr.right, ctx);
+  if (expr.kind === "union") return unionArg(expr.left, expr.right, ctx);
   return { kind: "value", value: { kind: "error", code: "#VALUE!" } };
 }
 
-function scalarRect(rect: Extract<Arg, { kind: "range" }>, ctx: EvalCtx): Value {
+function scalarRect(rect: Area, ctx: EvalCtx): Value {
   const hit = scalarRangeCell(rect.col0, rect.row0, rect.col1, rect.row1, ctx.col, ctx.row);
   if (hit === null) return { kind: "error", code: "#VALUE!" };
   return computeCell(ctx, rect.sheet, hit.col, hit.row);

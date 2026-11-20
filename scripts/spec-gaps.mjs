@@ -520,6 +520,27 @@ const cases = [
     expect: 20,
     note: "Calc space between refs is intersection",
   },
+  {
+    id: "tilde-union",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: 4, A2: 6, B1: "=SUM(A1:A1~A2:A2)" } } },
+    cell: "Sheet1!B1",
+    expect: 10,
+    note: "Calc ~ is range union",
+  },
+  {
+    id: "sheet-span",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=SUM(Sheet1!A2:Sheet2!A2)", A2: 4 },
+        Sheet2: { A2: 6 },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: 10,
+    note: "Calc range with ends on two sheets sums across the sheet span",
+  },
 ];
 
 function runCase(c) {

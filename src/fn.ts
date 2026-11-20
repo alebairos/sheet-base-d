@@ -6,16 +6,27 @@ import { criteriaMatch, criteriaText, foldCriteria } from "./wild.js";
 import type { Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
 
-export type Arg =
-  | { kind: "value"; value: Value }
-  | {
-      kind: "range";
-      sheet: string;
-      col0: number;
-      row0: number;
-      col1: number;
-      row1: number;
-    };
+export type Area = {
+  sheet: string;
+  col0: number;
+  row0: number;
+  col1: number;
+  row1: number;
+};
+
+export type Arg = { kind: "value"; value: Value } | { kind: "areas"; areas: Area[] };
+
+export function oneArea(
+  arg: Arg,
+  missing: ErrorCode = "#VALUE!",
+): Area | { kind: "error"; code: ErrorCode } {
+  if (arg.kind === "value") {
+    return arg.value.kind === "error" ? arg.value : { kind: "error", code: missing };
+  }
+  const area = arg.areas[0];
+  if (arg.areas.length !== 1 || area === undefined) return { kind: "error", code: missing };
+  return area;
+}
 
 export type FnHost = {
   arg(expr: Expr): Arg;
@@ -28,7 +39,6 @@ export type FnHost = {
 
 export type Fn = (args: readonly Expr[], host: FnHost) => Value;
 
-type RangeArg = Extract<Arg, { kind: "range" }>;
 type NumOrErr = { kind: "number"; n: number } | { kind: "error"; code: ErrorCode };
 type Op = "eq" | "ne" | "lt" | "le" | "gt" | "ge";
 type RoundMode = "half" | "up" | "down";
@@ -86,14 +96,16 @@ function sum(args: readonly Expr[], host: FnHost): Value {
 
 function addArg(total: number, arg: Arg, host: FnHost): NumOrErr {
   if (arg.kind === "value") return asNum(addScalar(total, arg.value, host));
-  for (let row = arg.row0; row <= arg.row1; row++) {
-    for (let col = arg.col0; col <= arg.col1; col++) {
-      const part = sumCell(host.cell(arg.sheet, col, row));
-      if (part === null) continue;
-      if (part.kind === "error") return part;
-      const next = asNum(host.number(total + part.n));
-      if (next.kind === "error") return next;
-      total = next.n;
+  for (const area of arg.areas) {
+    for (let row = area.row0; row <= area.row1; row++) {
+      for (let col = area.col0; col <= area.col1; col++) {
+        const part = sumCell(host.cell(area.sheet, col, row));
+        if (part === null) continue;
+        if (part.kind === "error") return part;
+        const next = asNum(host.number(total + part.n));
+        if (next.kind === "error") return next;
+        total = next.n;
+      }
     }
   }
   return asNum(host.number(total));
@@ -153,9 +165,11 @@ function visit(
       if (!fn(arg.value, false)) return;
       continue;
     }
-    for (let row = arg.row0; row <= arg.row1; row++) {
-      for (let col = arg.col0; col <= arg.col1; col++) {
-        if (!fn(host.cell(arg.sheet, col, row), true)) return;
+    for (const area of arg.areas) {
+      for (let row = area.row0; row <= area.row1; row++) {
+        for (let col = area.col0; col <= area.col1; col++) {
+          if (!fn(host.cell(area.sheet, col, row), true)) return;
+        }
       }
     }
   }
@@ -449,7 +463,9 @@ function scalarNumber(expr: Expr, host: FnHost): NumOrErr {
 function scalarValue(expr: Expr, host: FnHost): Value {
   const arg = host.arg(expr);
   if (arg.kind === "value") return arg.value;
-  if (arg.col0 === arg.col1 && arg.row0 === arg.row1) return host.cell(arg.sheet, arg.col0, arg.row0);
+  const area = oneArea(arg);
+  if ("code" in area) return area;
+  if (area.col0 === area.col1 && area.row0 === area.row1) return host.cell(area.sheet, area.col0, area.row0);
   return { kind: "error", code: "#VALUE!" };
 }
 
@@ -511,14 +527,14 @@ function frame(
   args: readonly Expr[],
   host: FnHost,
   allowSum: boolean,
-): { kind: "ok"; range: RangeArg; anchor: RangeArg; crit: Crit } | { kind: "error"; code: ErrorCode } {
+): { kind: "ok"; range: Area; anchor: Area; crit: Crit } | { kind: "error"; code: ErrorCode } {
   const max = allowSum ? 3 : 2;
   if (args.length < 2 || args.length > max) return { kind: "error", code: "#VALUE!" };
   const rangeExpr = args[0];
   const critExpr = args[1];
   if (rangeExpr === undefined || critExpr === undefined) return { kind: "error", code: "#VALUE!" };
   const range = asRange(rangeExpr, host);
-  if (range.kind !== "range") return range;
+  if ("code" in range) return range;
   const crit = criteriaFrom(critExpr, host);
   if (crit.kind === "error") return crit;
   let anchor = range;
@@ -526,15 +542,15 @@ function frame(
     const sumExpr = args[2];
     if (sumExpr === undefined) return { kind: "error", code: "#VALUE!" };
     const sumRange = asRange(sumExpr, host);
-    if (sumRange.kind !== "range") return sumRange;
+    if ("code" in sumRange) return sumRange;
     anchor = sumRange;
   }
   return { kind: "ok", range, anchor, crit };
 }
 
 function eachMatch(
-  range: RangeArg,
-  anchor: RangeArg,
+  range: Area,
+  anchor: Area,
   crit: Crit,
   host: FnHost,
   fn: (value: Value) => boolean,
@@ -552,10 +568,8 @@ function eachMatch(
   }
 }
 
-function asRange(expr: Expr, host: FnHost): RangeArg | { kind: "error"; code: ErrorCode } {
-  const arg = host.arg(expr);
-  if (arg.kind === "range") return arg;
-  return arg.value.kind === "error" ? arg.value : { kind: "error", code: "#VALUE!" };
+function asRange(expr: Expr, host: FnHost): Area | { kind: "error"; code: ErrorCode } {
+  return oneArea(host.arg(expr));
 }
 
 function criteriaFrom(expr: Expr, host: FnHost): Crit {

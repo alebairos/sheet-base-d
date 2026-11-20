@@ -453,6 +453,7 @@ function mod(args: readonly Expr[], host: FnHost): Value {
 }
 
 function modCalc(n: number, d: number): number {
+  if (Number.isSafeInteger(n) && Number.isSafeInteger(d)) return modSafe(n, d);
   let q = n / d;
   const nearest = Math.round(q);
   if (near(q, nearest)) q = nearest;
@@ -460,6 +461,14 @@ function modCalc(n: number, d: number): number {
   if (near(n, d * q)) return 0;
   const r = n - d * q;
   return r === 0 ? 0 : r;
+}
+
+// The snap above turns a remainder of 1 into 0 near 2^52. Exact integers skip it.
+function modSafe(n: number, d: number): number {
+  const r = n % d;
+  if (r === 0) return 0;
+  if ((r < 0) === (d < 0)) return r;
+  return r + d;
 }
 
 function abs(args: readonly Expr[], host: FnHost): Value {

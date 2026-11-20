@@ -2,7 +2,10 @@ export function formatNumber(n: number): string {
   if (n === 0) return "0";
   const neg = n < 0;
   const abs = Math.abs(n);
-  const body = abs >= 1e16 || abs < 1e-14 ? formatSci(abs) : formatFixed(abs);
+  let body: string;
+  if (Number.isSafeInteger(n) && abs >= 1e15) body = abs.toFixed(0);
+  else if (abs >= 1e15 || abs < 1e-14) body = formatSci(abs);
+  else body = formatFixed(abs);
   return neg ? `-${body}` : body;
 }
 
@@ -19,6 +22,10 @@ function formatSci(abs: number): string {
   let s = mant.toPrecision(15);
   if (/[eE]/.test(s)) s = String(Number(s));
   if (s.includes(".")) s = s.replace(/0+$/, "").replace(/\.$/, "");
+  if (s === "10") {
+    s = "1";
+    exp += 1;
+  }
   const sign = exp < 0 ? "-" : "+";
   const digits = String(Math.abs(exp)).padStart(3, "0");
   return `${s}E${sign}${digits}`;

@@ -1339,6 +1339,46 @@ const cases = [
     expect: 999999999999996,
     note: "canary: nearby integer already matched Calc",
   },
+  {
+    id: "concat-16digit",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '=1234567890123456&""' } } },
+    cell: "Sheet1!A1",
+    expect: "1234567890123456",
+    note: "Calc concatenation keeps the exact 16-digit integer text",
+  },
+  {
+    id: "concat-2pow53",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '=(2^53)&""' } } },
+    cell: "Sheet1!A1",
+    expect: "9.00719925474099E+015",
+    note: "Calc concatenates 2^53 in scientific form",
+  },
+  {
+    id: "concat-neg-2pow53",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '=(-2^53)&""' } } },
+    cell: "Sheet1!A1",
+    expect: "-9.00719925474099E+015",
+    note: "Calc concatenates -2^53 in scientific form",
+  },
+  {
+    id: "concat-10pow15",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '=(10^15)&""' } } },
+    cell: "Sheet1!A1",
+    expect: "1000000000000000",
+    note: "canary: 10^15 concatenation stays fixed digits",
+  },
+  {
+    id: "concat-10pow16",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '=(10^16)&""' } } },
+    cell: "Sheet1!A1",
+    expect: "1E+016",
+    note: "canary: 10^16 concatenation stays scientific",
+  },
 ];
 
 function runCase(c) {

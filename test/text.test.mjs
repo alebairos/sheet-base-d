@@ -15,6 +15,23 @@ function compute(cells) {
   return JSON.parse(res.stdout).sheets.Sheet1;
 }
 
+test("concatenation keeps exact safe integers and scientific text at 2^53", () => {
+  const out = compute({
+    A1: '=1234567890123456&""',
+    A2: '=(2^53)&""',
+    A3: '=(-2^53)&""',
+    A4: '=(10^15)&""',
+    A5: '=(10^16)&""',
+    A6: '=(10^16-2)&""',
+  });
+  assert.equal(out.A1, "1234567890123456");
+  assert.equal(out.A2, "9.00719925474099E+015");
+  assert.equal(out.A3, "-9.00719925474099E+015");
+  assert.equal(out.A4, "1000000000000000");
+  assert.equal(out.A5, "1E+016");
+  assert.equal(out.A6, "1E+016");
+});
+
 test("CONCATENATE joins text, numbers, and booleans", () => {
   const out = compute({
     A1: '=CONCATENATE("a","b","c")',

@@ -41,7 +41,7 @@ export function criteriaMatch(pattern: string, text: string): boolean {
 }
 
 type Mode = { i: boolean; s: boolean; m: boolean; x: boolean };
-type Scan = { src: string; i: number; sawFlag: boolean };
+type Scan = { src: string; i: number; sawFlag: boolean; bad: boolean };
 
 const FREE_SPACE = new Set([" ", "\t", "\n", "\r", "\f", "\v"]);
 
@@ -53,7 +53,7 @@ function compileCriteria(pattern: string): RegExp | "never" | "literal" {
   if (pattern === "^" || pattern === "$" || pattern === "|") return "literal";
   const rewritten = rewritePosix(pattern);
   if (rewritten === "never") return "never";
-  const scan: Scan = { src: rewritten, i: 0, sawFlag: false };
+  const scan: Scan = { src: rewritten, i: 0, sawFlag: false, bad: false };
   const mode: Mode = { i: true, s: false, m: false, x: false };
   const body = readSeq(scan, false, mode);
   if (body === null) return "never";
@@ -85,6 +85,7 @@ function readSeq(scan: Scan, stop: boolean, mode: Mode): string | null {
   };
   while (scan.i < scan.src.length) {
     const escaped = takeEscape(scan, mode, false);
+    if (scan.bad) return null;
     if (escaped !== null) {
       buf += escaped;
       continue;
@@ -101,6 +102,7 @@ function readSeq(scan: Scan, stop: boolean, mode: Mode): string | null {
     if (c === "[") {
       scan.i++;
       buf += readClass(scan, mode);
+      if (scan.bad) return null;
       continue;
     }
     if (c === "(" && scan.src[scan.i + 1] === "?") {
@@ -196,6 +198,7 @@ function readClass(scan: Scan, mode: Mode): string {
   let afterCaret = false;
   while (scan.i < scan.src.length) {
     const escaped = takeEscape(scan, mode, true);
+    if (scan.bad) return "";
     if (escaped !== null) {
       body += escaped;
       primed = true;
@@ -359,6 +362,32 @@ function finishClass(body: string): string {
   return `${negated ? "[^" : "["}${rest}\\W]`;
 }
 
+function isHex(ch: string): boolean {
+  return (ch >= "0" && ch <= "9") || (ch >= "A" && ch <= "F") || (ch >= "a" && ch <= "f");
+}
+
+// scan.i points at the backslash of \x{...}. One to seven hex digits, at most U+10FFFF, and not a surrogate.
+// A bad brace sets scan.bad and matches nothing. Two-digit \xHH stays a JS escape.
+function hexBrace(scan: Scan): string | null {
+  let j = scan.i + 3;
+  let hex = "";
+  while (j < scan.src.length && hex.length < 8) {
+    const c = scan.src[j] ?? "";
+    if (c === "}" || !isHex(c)) break;
+    hex += c;
+    j++;
+  }
+  const closed = scan.src[j] === "}" && hex.length >= 1 && hex.length <= 7;
+  const cp = closed ? Number.parseInt(hex, 16) : Number.NaN;
+  const surrogate = cp >= 0xd800 && cp <= 0xdfff;
+  if (!closed || cp > 0x10ffff || surrogate) {
+    scan.bad = true;
+    return null;
+  }
+  scan.i = j + 1;
+  return `\\u{${hex}}`;
+}
+
 function takeEscape(scan: Scan, mode: Mode, inClass: boolean): string | null {
   if (scan.src[scan.i] !== "\\") return null;
   const next = scan.src[scan.i + 1];
@@ -370,6 +399,10 @@ function takeEscape(scan: Scan, mode: Mode, inClass: boolean): string | null {
   if (next === "E") {
     scan.i += 2;
     return "E";
+  }
+  if (next === "x" && scan.src[scan.i + 2] === "{") {
+    const hex = hexBrace(scan);
+    return hex ?? "";
   }
   scan.i += 2;
   // Unicode regex rejects an escaped space. In (?x) that escape is a literal space or hash.

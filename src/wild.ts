@@ -267,6 +267,13 @@ function rewritePosix(pattern: string): string | "never" {
   let i = 0;
   while (i < pattern.length) {
     if (pattern[i] === "\\" && i + 1 < pattern.length) {
+      // A quote is literal, including any [:name:] it happens to contain.
+      if (pattern[i + 1] === "Q") {
+        const stop = quoteStop(pattern, i + 2);
+        out += pattern.slice(i, stop);
+        i = stop;
+        continue;
+      }
       out += pattern.slice(i, i + 2);
       i += 2;
       continue;
@@ -315,6 +322,10 @@ function classOpen(out: string): "none" | "in" | "empty" | "caret" {
   let start = -1;
   for (let i = 0; i < out.length; i++) {
     if (out[i] === "\\") {
+      if (out[i + 1] === "Q") {
+        i = quoteStop(out, i + 2) - 1;
+        continue;
+      }
       i += 1;
       continue;
     }
@@ -352,10 +363,42 @@ function takeEscape(scan: Scan, mode: Mode, inClass: boolean): string | null {
     scan.i++;
     return "\\";
   }
+  if (next === "Q") return quoteLiteral(scan, inClass);
+  if (next === "E") {
+    scan.i += 2;
+    return "E";
+  }
   scan.i += 2;
   // Unicode regex rejects an escaped space. In (?x) that escape is a literal space or hash.
   if (mode.x && (FREE_SPACE.has(next) || next === "#")) return next;
   return unicodeClassEscape(next, inClass);
+}
+
+// \Q starts a literal run and \E ends it. A missing \E runs through the end of the pattern.
+// The run keeps the case mode already in effect. \E with no open quote is the letter E.
+function quoteLiteral(scan: Scan, inClass: boolean): string {
+  scan.i += 2;
+  let out = "";
+  while (scan.i < scan.src.length) {
+    const ch = scan.src[scan.i] ?? "";
+    if (ch === "\\" && scan.src[scan.i + 1] === "E") {
+      scan.i += 2;
+      break;
+    }
+    out += escapeLiteral(ch, inClass);
+    scan.i += 1;
+  }
+  return out;
+}
+
+function quoteStop(src: string, from: number): number {
+  const end = src.indexOf("\\E", from);
+  return end < 0 ? src.length : end + 2;
+}
+
+function escapeLiteral(ch: string, inClass: boolean): string {
+  if (inClass) return "\\][-^".includes(ch) ? `\\${ch}` : ch;
+  return META.test(ch) ? `\\${ch}` : ch;
 }
 
 function unicodeClassEscape(next: string, inClass: boolean): string {

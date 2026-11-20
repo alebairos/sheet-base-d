@@ -514,6 +514,105 @@ test("COUNTIF POSIX classes use Calc Unicode sets", () => {
   assert.equal(out.C6, 1);
 });
 
+test("COUNTIF \\Q...\\E quotes criteria text and an unclosed \\Q quotes to the end", () => {
+  const out = compute({
+    A1: "a+b",
+    A2: "aaab",
+    A3: "A+B",
+    A4: "a.b",
+    A5: "axb",
+    A6: "aaa",
+    A7: "a+",
+    A8: "abb",
+    A9: "abab",
+    A10: "E",
+    A11: "\\E",
+    A12: "",
+    A13: "a",
+    A14: "[:digit:]",
+    A15: "5",
+    A16: " a ",
+    A17: "b",
+    A18: "z",
+    A19: "-",
+    A20: "a[5",
+    A21: "a[x",
+    B1: 4,
+    C1: '=COUNTIF(A1,"\\Qa+b\\E")',
+    C2: '=COUNTIF(A2,"\\Qa+b\\E")',
+    C3: '=COUNTIF(A3,"\\Qa+b\\E")',
+    C4: '=COUNTIF(A1,"\\Qa+b")',
+    C5: '=COUNTIF(A2,"\\Qa+b")',
+    C6: '=COUNTIF(A4,"a\\Q.\\Eb")',
+    C7: '=COUNTIF(A5,"a\\Q.\\Eb")',
+    C8: '=COUNTIF(A6,"\\Qa\\E+")',
+    C9: '=COUNTIF(A7,"\\Qa\\E+")',
+    C10: '=COUNTIF(A7,"\\Qa+\\E")',
+    C11: '=COUNTIF(A6,"\\Qa+\\E")',
+    C12: '=COUNTIF(A8,"\\Qab\\E+")',
+    C13: '=COUNTIF(A9,"\\Qab\\E+")',
+    C14: '=COUNTIF(A10,"\\E")',
+    C15: '=COUNTIF(A11,"\\E")',
+    C16: '=COUNTIF(A12,"\\Q\\E")',
+    C17: '=COUNTIF(A13,"\\Q\\E")',
+    C18: '=COUNTIF(A12,"\\Q")',
+    C19: '=COUNTIF(A14,"\\Q[:digit:]\\E")',
+    C20: '=COUNTIF(A15,"\\Q[:digit:]\\E")',
+    C21: '=COUNTIF(A15,"[:digit:]")',
+    C22: '=COUNTIF(A16,"(?x)\\Q a \\E")',
+    C23: '=COUNTIF(A13,"(?x)\\Q a \\E")',
+    C24: '=COUNTIF(A3,"(?-i)\\Qa+b\\E")',
+    C25: '=COUNTIF(A1,"(?-i)\\Qa+b\\E")',
+    C26: '=COUNTIF(A17,"[a\\Q-\\Ez]")',
+    C27: '=COUNTIF(A18,"[a\\Q-\\Ez]")',
+    C28: '=COUNTIF(A19,"[a\\Q-\\Ez]")',
+    C29: '=COUNTIF(A1,"[a\\Q-\\Ez]")',
+    C30: '=MATCH("\\Qa+b\\E",A1,0)',
+    C31: '=SUMIF(A1,"\\Qa+b\\E",B1)',
+    C32: '=VLOOKUP("\\Qa+b\\E",A1:B1,2,FALSE)',
+    C33: '=COUNTIF(A6,"a+")',
+    C34: '=COUNTIF(A7,"a+")',
+    C35: '=COUNTIF(A20,"\\Qa[\\E[:digit:]")',
+    C36: '=COUNTIF(A21,"\\Qa[\\E[:digit:]")',
+  });
+  assert.equal(out.C1, 1);
+  assert.equal(out.C2, 0);
+  assert.equal(out.C3, 1);
+  assert.equal(out.C4, 1);
+  assert.equal(out.C5, 0);
+  assert.equal(out.C6, 1);
+  assert.equal(out.C7, 0);
+  assert.equal(out.C8, 1);
+  assert.equal(out.C9, 0);
+  assert.equal(out.C10, 1);
+  assert.equal(out.C11, 0);
+  assert.equal(out.C12, 1);
+  assert.equal(out.C13, 0);
+  assert.equal(out.C14, 1);
+  assert.equal(out.C15, 0);
+  assert.equal(out.C16, 1);
+  assert.equal(out.C17, 0);
+  assert.equal(out.C18, 1);
+  assert.equal(out.C19, 1);
+  assert.equal(out.C20, 0);
+  assert.equal(out.C21, 1);
+  assert.equal(out.C22, 1);
+  assert.equal(out.C23, 0);
+  assert.equal(out.C24, 0);
+  assert.equal(out.C25, 1);
+  assert.equal(out.C26, 0);
+  assert.equal(out.C27, 1);
+  assert.equal(out.C28, 1);
+  assert.equal(out.C29, 0);
+  assert.equal(out.C30, 1);
+  assert.equal(out.C31, 4);
+  assert.equal(out.C32, 4);
+  assert.equal(out.C33, 1);
+  assert.equal(out.C34, 0);
+  assert.equal(out.C35, 1);
+  assert.equal(out.C36, 0);
+});
+
 test("COUNTIF does not treat ß as ss", () => {
   const out = compute({
     A1: "ss",

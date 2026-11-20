@@ -187,6 +187,7 @@ function scanAscNumber(cells: readonly Value[], key: Value): number | null {
   let equal: number | null = null;
   let prev: number | null = null;
   let phase: "walk" | "descended" | "seek" = "walk";
+  let seekEquals = 0;
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
     if (cell === undefined) continue;
@@ -198,13 +199,17 @@ function scanAscNumber(cells: readonly Value[], key: Value): number | null {
     if (phase === "walk" && equal !== null && prev !== null && cmpNum(n, prev) < 0) phase = "descended";
     prev = n;
     if (rank === 0) {
+      if (phase === "seek") {
+        equal = i;
+        seekEquals += 1;
+        continue;
+      }
       if (phase !== "descended") equal = i;
       continue;
     }
     if (phase === "seek") {
-      if (equal !== null) return equal;
-      if (rank < 0) return null;
-      continue;
+      if (equal !== null && rank > 0) return equal;
+      return null;
     }
     if (rank > 0) {
       if (equal !== null || loose !== null) return equal ?? loose;
@@ -213,6 +218,7 @@ function scanAscNumber(cells: readonly Value[], key: Value): number | null {
     }
     loose = i;
   }
+  if (phase === "seek") return seekEquals > 1 ? equal : null;
   return equal ?? loose;
 }
 

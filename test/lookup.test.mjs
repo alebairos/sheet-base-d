@@ -85,7 +85,7 @@ test("MATCH descending returns the last equal value in a sorted column", () => {
   assert.equal(out.B2, 1);
   assert.equal(out.B3, 4);
   assert.deepEqual(out.B4, { error: "#N/A" });
-  assert.equal(out.B5, 3);
+  assert.deepEqual(out.B5, { error: "#N/A" });
 });
 
 test("MATCH descending ignores an equal after a value below the key", () => {

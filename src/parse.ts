@@ -137,7 +137,13 @@ class Parser {
         while (isDigit(this.ch())) this.i++;
       }
     }
-    this.tok = { k: "num", n: Number(this.src.slice(start, this.i)) };
+    const text = this.src.slice(start, this.i);
+    let n = Number(text);
+    // Calc rejects a literal that flushes to 0. A zero significand, such as 0E-400, stays 0.
+    const expAt = text.search(/[eE]/);
+    const mag = expAt < 0 ? text : text.slice(0, expAt);
+    if (n === 0 && /[1-9]/.test(mag)) n = Number.NaN;
+    this.tok = { k: "num", n };
   }
 
   private readQuoted(quote: '"' | "'", kind: "str" | "qsheet"): void {

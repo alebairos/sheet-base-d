@@ -79,6 +79,43 @@ test("a cell that is not a value exits non-zero", () => {
   assert.notEqual(res.status, 0);
 });
 
+test("a numeric literal that flushes to zero is #NUM!", () => {
+  const input = {
+    sheets: {
+      Sheet1: {
+        A1: "=1E-324",
+        A2: "=-1E-324",
+        A3: "=1E-324+1",
+        A4: "=00.1E-323",
+        A5: "=2E-324",
+        A6: "=0E-400",
+        A7: "=5E-324",
+        A8: "=4E-324",
+        A9: "=1E-323",
+        A10: "=1E-200*1E-200",
+      },
+    },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: {
+      Sheet1: {
+        A1: { error: "#NUM!" },
+        A2: { error: "#NUM!" },
+        A3: { error: "#NUM!" },
+        A4: { error: "#NUM!" },
+        A5: { error: "#NUM!" },
+        A6: 0,
+        A7: 5e-324,
+        A8: 5e-324,
+        A9: 1e-323,
+        A10: 0,
+      },
+    },
+  });
+});
+
 test("literal formulas follow Calc precedence", () => {
   const input = {
     sheets: {

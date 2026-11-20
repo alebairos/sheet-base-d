@@ -459,10 +459,10 @@ function parseNumericText(raw: string): number | null {
   if (text.startsWith("$")) {
     hadDollar = true;
     text = text.slice(1);
-    if (text.startsWith(" ") && !text.startsWith(" (")) text = text.slice(1);
+    text = text.replace(/^ +/, "");
   }
   if (text.startsWith("(")) {
-    const outsidePercent = /^(.*\))%$/.exec(text);
+    const outsidePercent = /^(.*\)) *% *$/.exec(text);
     const inside = outsidePercent?.[1];
     if (inside !== undefined) {
       percentOutside = true;
@@ -475,7 +475,7 @@ function parseNumericText(raw: string): number | null {
     if (!hadDollar && text.startsWith("$")) {
       hadDollar = true;
       text = text.slice(1);
-      if (text.startsWith(" ") && !text.startsWith(" (")) text = text.slice(1);
+      text = text.replace(/^ +/, "");
     }
   }
   if (!hadDollar && text.endsWith("$")) {

@@ -433,6 +433,8 @@ class Parser {
   private parsePostfix(): Expr {
     let expr = this.parsePrimary();
     while (this.tok.k === "pct") {
+      // 1%# and A1%# are syntax errors. A hash glued to a number, as in 1#, stays a name.
+      if (this.peekNonSpace() === "#") this.fail();
       this.bump();
       expr = { kind: "unary", op: "%", arg: expr };
     }
@@ -782,6 +784,8 @@ class Parser {
     // Calc supplies missing closing parentheses when the expression is already complete.
     if (k === ")" && this.tok.k === "eof") return;
     if (this.tok.k !== k) this.fail();
+    // (A1)# and SUM(1)# are syntax errors. A hash inside, as in (1#), stays a name.
+    if (k === ")" && this.peekNonSpace() === "#") this.fail();
     this.bump();
   }
 }

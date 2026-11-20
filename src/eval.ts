@@ -467,9 +467,29 @@ export function asText(value: Value): { kind: "text"; t: string } | Err {
   }
 }
 
+// Calc numeric padding is a space, NBSP, or narrow no-break space. A tab and other Unicode spaces stay text.
+const NUM_PAD = " \u00a0\u202f";
+
+function isNumPad(ch: string): boolean {
+  return NUM_PAD.includes(ch);
+}
+
+function stripNumPad(raw: string): string {
+  let start = 0;
+  let end = raw.length;
+  while (start < end && isNumPad(raw[start] ?? "")) start++;
+  while (end > start && isNumPad(raw[end - 1] ?? "")) end--;
+  return raw.slice(start, end);
+}
+
+const NUM_PAD_CLASS = `[${NUM_PAD}]`;
+const DECIMAL_TEXT = new RegExp(
+  `^([+-]${NUM_PAD_CLASS}*)?((?:(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?)${NUM_PAD_CLASS}*(%)?$`,
+);
+
 function parseNumericText(raw: string): number | null {
   const hadLeadingSpace = /^\s/.test(raw);
-  const t = raw.trim().replaceAll("\u2212", "-");
+  const t = stripNumPad(raw).replaceAll("\u2212", "-");
   if (t === "") return null;
   const word = t.toUpperCase();
   if (word === "TRUE") return 1;
@@ -496,7 +516,7 @@ function parseNumericText(raw: string): number | null {
   }
   if (text.startsWith("(") && text.endsWith(")")) {
     negative = true;
-    text = text.slice(1, -1).trim();
+    text = stripNumPad(text.slice(1, -1));
     if (!hadDollar && text.startsWith("$")) {
       hadDollar = true;
       text = text.slice(1);
@@ -511,10 +531,7 @@ function parseNumericText(raw: string): number | null {
   const leadingSign = signBeforeDollar?.[1];
   if (leadingSign !== undefined) text = leadingSign + text;
 
-  const match =
-    /^([+-]\s*)?((?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*(%)?$/.exec(
-      text,
-    );
+  const match = DECIMAL_TEXT.exec(text);
   if (match !== null) {
     const sign = match[1]?.charAt(0) ?? "";
     const body = match[2];
@@ -531,7 +548,7 @@ function parseNumericText(raw: string): number | null {
     return negative ? -scaled : scaled;
   }
 
-  const frac = /^([+-]\s*)?(\d+)\s+(\d+)\s*\/\s*(\d+)$/.exec(text);
+  const frac = /^([+-] *)?(\d+) +(\d+) *\/ *(\d+)$/.exec(text);
   if (frac === null || hadLeadingSpace || hadDollar) return null;
   const sign = frac[1]?.charAt(0) ?? "";
   if (negative && sign !== "") return null;

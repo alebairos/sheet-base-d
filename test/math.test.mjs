@@ -749,6 +749,63 @@ test("COUNTIF, SUMIF, and AVERAGEIF keep spaces on a numeric criterion", () => {
   assert.equal(out.C23, 1);
 });
 
+test("numeric text keeps space and no-break spaces and rejects a tab", () => {
+  const out = compute({
+    A1: '="\t2"+0',
+    A2: '="2\t"+0',
+    A3: '="+\t2"+0',
+    A4: '="2\t%"+0',
+    A5: '="(\t2)"+0',
+    A6: '="\u20032"+0',
+    A7: '="\n2"+0',
+    A8: '="\u00a02"+0',
+    A9: '="\u202f2"+0',
+    A10: '="+ 2"+0',
+    A11: '="+\u00a02"+0',
+    A12: '="2\u00a0%"+0',
+    A13: '="( 2 )"+0',
+    A14: '="(\u00a02)"+0',
+    A15: '=" TRUE"+0',
+    B1: 2,
+    B2: 3,
+    B3: 10,
+    C1: '=COUNTIF(B1,"\t2")',
+    C2: '=COUNTIF(B1,"2\t")',
+    C3: '=COUNTIF(B2,">\t2")',
+    C4: '=COUNTIF(B1,"\u00a02")',
+    C5: '=COUNTIF(B1,"\u202f2")',
+    C6: '=COUNTIF(B1,"\u20032")',
+    C7: '=COUNTIF(D1,"\t2")',
+    C8: '=SUMIF(B1,"\t2",B3)',
+    C9: '=SUMIF(B1," 2",B3)',
+    D1: "\t2",
+  });
+  assert.deepEqual(out.A1, { error: "#VALUE!" });
+  assert.deepEqual(out.A2, { error: "#VALUE!" });
+  assert.deepEqual(out.A3, { error: "#VALUE!" });
+  assert.deepEqual(out.A4, { error: "#VALUE!" });
+  assert.deepEqual(out.A5, { error: "#VALUE!" });
+  assert.deepEqual(out.A6, { error: "#VALUE!" });
+  assert.deepEqual(out.A7, { error: "#VALUE!" });
+  assert.equal(out.A8, 2);
+  assert.equal(out.A9, 2);
+  assert.equal(out.A10, 2);
+  assert.equal(out.A11, 2);
+  assert.equal(out.A12, 0.02);
+  assert.equal(out.A13, -2);
+  assert.equal(out.A14, -2);
+  assert.equal(out.A15, 1);
+  assert.equal(out.C1, 0);
+  assert.equal(out.C2, 0);
+  assert.equal(out.C3, 0);
+  assert.equal(out.C4, 1);
+  assert.equal(out.C5, 1);
+  assert.equal(out.C6, 0);
+  assert.equal(out.C7, 1);
+  assert.equal(out.C8, 0);
+  assert.equal(out.C9, 10);
+});
+
 test("STDEV is the sample standard deviation", () => {
   const out = compute({
     A1: "=STDEV(1,2,3)",

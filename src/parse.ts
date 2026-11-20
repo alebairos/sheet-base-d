@@ -32,6 +32,7 @@ export type Expr =
   | { kind: "call"; name: string; args: Expr[] }
   | { kind: "ref"; cell: CellRef }
   | { kind: "range"; start: CellRef; end: CellRef }
+  | { kind: "name" }
   | { kind: "intersect"; left: Expr; right: Expr }
   | { kind: "union"; left: Expr; right: Expr };
 
@@ -97,7 +98,7 @@ class Parser {
       this.readNumber();
       return;
     }
-    if (c === "$" || isLetter(c)) {
+    if (c === "$" || isLetter(c) || c === "_") {
       this.readNameOrRef();
       return;
     }
@@ -175,7 +176,12 @@ class Parser {
     }
     const start = this.i;
     const letters = this.readLetters();
-    if (letters === null) this.fail();
+    if (letters === null) {
+      if (this.ch() !== "_") this.fail();
+      while (isNameChar(this.ch())) this.i++;
+      this.tok = { k: "id", name: this.src.slice(start, this.i) };
+      return;
+    }
     if (this.ch() === "$" || isDigit(this.ch())) {
       const absRow = this.ch() === "$";
       if (absRow) this.i++;
@@ -184,6 +190,12 @@ class Parser {
       const next = this.peekNonSpace();
       if (!absRow && (next === "(" || (next === "!" && cellAddr(letters, digits) === null))) {
         this.tok = { k: "id", name: letters + digits };
+        return;
+      }
+      // A1B is a name. A valid address with nothing name-like after it stays a cell.
+      if (!absRow && isNameChar(this.ch()) && cellAddr(letters, digits) !== null) {
+        while (isNameChar(this.ch())) this.i++;
+        this.tok = { k: "id", name: this.src.slice(start, this.i) };
         return;
       }
       this.emitRef(false, absRow, letters, digits);
@@ -381,6 +393,7 @@ class Parser {
       if (this.tok.k === "!") return this.unionMore(this.parseAnchoredRef(name));
       const upper = name.toUpperCase();
       if (upper === "TRUE" || upper === "FALSE") return { kind: "bool", b: upper === "TRUE" };
+      if (/^[A-Za-z]{1,3}\d+[A-Za-z_.]/.test(name)) return { kind: "name" };
       throw new NameFail();
     }
     if (tok.k === "ref") {
@@ -431,14 +444,41 @@ class Parser {
 
   private parseAnchoredRef(sheet: string): Expr {
     this.expect("!");
+    if (this.tok.k !== "ref") return this.brokenName();
     const start = this.takeRef(sheet);
     return this.maybeRange(start);
+  }
+
+  // Sheet!Hello, Sheet!, and Sheet!1 are names. They error when evaluated.
+  private brokenName(): Expr {
+    const head = (this.tok as Tok).k;
+    if (head === "id" || head === "num") {
+      this.bump();
+      const next = (this.tok as Tok).k;
+      if (next === ":") {
+        this.bump();
+        this.parseRangeEnd();
+      }
+      return { kind: "name" };
+    }
+    if (
+      this.tok.k === "eof" ||
+      this.tok.k === ")" ||
+      this.tok.k === "," ||
+      this.tok.k === "~" ||
+      this.tok.k === "pct" ||
+      this.tok.k === "op"
+    ) {
+      return { kind: "name" };
+    }
+    this.fail();
   }
 
   private maybeRange(start: CellRef): Expr {
     if (this.tok.k !== ":") return this.intersectMore({ kind: "ref", cell: start });
     this.bump();
     const end = this.parseRangeEnd();
+    if (end === "name") return { kind: "name" };
     if (start.sheet !== null && end.sheet === null) end.sheet = start.sheet;
     return this.intersectMore({ kind: "range", start, end });
   }
@@ -488,19 +528,35 @@ class Parser {
     this.fail();
   }
 
-  private parseRangeEnd(): CellRef {
-    const tok = this.tok;
-    if (tok.k === "qsheet") {
+  private parseRangeEnd(): CellRef | "name" {
+    const kind = (this.tok as Tok).k;
+    if (kind === "qsheet" && this.tok.k === "qsheet") {
+      const name = this.tok.name;
       this.bump();
       this.expect("!");
-      return this.takeRef(tok.name);
+      const cellKind = (this.tok as Tok).k;
+      if (cellKind !== "ref") {
+        if (cellKind === "id" || cellKind === "num") this.bump();
+        else this.fail();
+        return "name";
+      }
+      return this.takeRef(name);
     }
-    if (tok.k === "id") {
-      const cell = this.bareCell(tok.name);
+    if (kind === "id" && this.tok.k === "id") {
+      const name = this.tok.name;
+      const cell = this.bareCell(name);
       this.bump();
-      if (cell !== null && this.tok.k === "!") return cell;
-      this.expect("!");
-      return this.takeRef(tok.name);
+      const after = (this.tok as Tok).k;
+      if (cell !== null && after === "!") return cell;
+      if (after !== "!") return "name";
+      this.bump();
+      const tail = (this.tok as Tok).k;
+      if (tail !== "ref") {
+        if (tail === "id" || tail === "num") this.bump();
+        else this.fail();
+        return "name";
+      }
+      return this.takeRef(name);
     }
     return this.takeRef(null);
   }

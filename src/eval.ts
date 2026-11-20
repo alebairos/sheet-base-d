@@ -123,6 +123,8 @@ export function evalExpr(expr: Expr, ctx: EvalCtx): Value {
       return evalCall(expr.name, expr.args, ctx);
     case "ref":
       return evalRef(expr.cell, ctx);
+    case "name":
+      return { kind: "error", code: "#NAME?" };
     case "range":
     case "intersect":
     case "union":
@@ -246,6 +248,7 @@ function rectArg(expr: Expr, ctx: EvalCtx): Arg {
   if (expr.kind === "range") return rangeArg(expr.start, expr.end, ctx);
   if (expr.kind === "intersect") return intersectArg(expr.left, expr.right, ctx);
   if (expr.kind === "union") return unionArg(expr.left, expr.right, ctx);
+  if (expr.kind === "name") return { kind: "value", value: { kind: "error", code: "#NAME?" } };
   return { kind: "value", value: { kind: "error", code: "#VALUE!" } };
 }
 

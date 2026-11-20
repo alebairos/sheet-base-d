@@ -232,12 +232,32 @@ test("TRIM drops outer spaces and collapses inner spaces", () => {
   assert.equal(out.B1, "a b");
   assert.equal(out.B2, "");
   assert.equal(out.B3, "a\u00a0b");
-  assert.equal(out.B4, "a\tb");
+  assert.equal(out.B4, "a b");
   assert.equal(out.B5, "a b");
   assert.equal(out.B6, "");
   assert.equal(out.B7, "");
   assert.equal(out.B8, "123");
   assert.equal(out.B9, "1");
   assert.deepEqual(out.B10, { error: "#VALUE!" });
-  assert.equal(out.B11, "a \n b");
+  assert.equal(out.B11, "a b");
+});
+
+test("TRIM treats tab, newline, and CR like space", () => {
+  const out = compute({
+    A1: "\ta\t",
+    A2: "\na\n",
+    A3: "\ra\r",
+    A4: "a\t\tb",
+    A5: "\u00a0a\u00a0",
+    B1: "=TRIM(A1)",
+    B2: "=TRIM(A2)",
+    B3: "=TRIM(A3)",
+    B4: "=TRIM(A4)",
+    B5: "=TRIM(A5)",
+  });
+  assert.equal(out.B1, "a");
+  assert.equal(out.B2, "a");
+  assert.equal(out.B3, "a");
+  assert.equal(out.B4, "a b");
+  assert.equal(out.B5, "\u00a0a\u00a0");
 });

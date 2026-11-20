@@ -152,21 +152,25 @@ function slicePoints(text: string, start: number, count: number): string {
   return Array.from(text).slice(start, start + count).join("");
 }
 
+function isTrimGap(text: string, index: number): boolean {
+  return text.charCodeAt(index) < 33;
+}
+
 function trimSpaces(text: string): string {
   let i = 0;
-  while (i < text.length && text[i] === " ") i++;
+  while (i < text.length && isTrimGap(text, i)) i++;
   let end = text.length;
-  while (end > i && text[end - 1] === " ") end--;
+  while (end > i && isTrimGap(text, end - 1)) end--;
   let out = "";
   let gap = false;
   for (let j = i; j < end; j++) {
-    const c = text[j];
-    if (c === " ") {
+    if (isTrimGap(text, j)) {
       gap = true;
       continue;
     }
     if (gap) out += " ";
     gap = false;
+    const c = text[j];
     if (c !== undefined) out += c;
   }
   return out;

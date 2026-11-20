@@ -6391,6 +6391,46 @@ const cases = [
     expect: { error: "#NAME?" },
     note: "canary: a glued #REF! after digits on a leading-dot name stays #NAME?",
   },
+  {
+    id: "trim-tab",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "\ta\t", B1: "=TRIM(A1)" } } },
+    cell: "Sheet1!B1",
+    expect: "a",
+    note: "Calc TRIM drops tab like space",
+  },
+  {
+    id: "trim-nl",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "\na\n", B1: "=TRIM(A1)" } } },
+    cell: "Sheet1!B1",
+    expect: "a",
+    note: "Calc TRIM drops newline like space",
+  },
+  {
+    id: "trim-cr",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "\ra\r", B1: "=TRIM(A1)" } } },
+    cell: "Sheet1!B1",
+    expect: "a",
+    note: "Calc TRIM drops carriage return like space",
+  },
+  {
+    id: "trim-inner-tabs",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "a\t\tb", B1: "=TRIM(A1)" } } },
+    cell: "Sheet1!B1",
+    expect: "a b",
+    note: "Calc TRIM collapses inner tabs to one space",
+  },
+  {
+    id: "trim-nbsp-canary",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "\u00a0a\u00a0", B1: "=TRIM(A1)" } } },
+    cell: "Sheet1!B1",
+    expect: "\u00a0a\u00a0",
+    note: "canary: Calc TRIM leaves NBSP alone",
+  },
 ];
 
 function runCase(c) {

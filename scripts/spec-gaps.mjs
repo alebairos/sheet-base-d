@@ -724,6 +724,46 @@ const cases = [
     expect: 7,
     note: "Calc sheet-span intersect itself keeps both sheets",
   },
+  {
+    id: "sumif-union",
+    pri: "P1",
+    book: {
+      sheets: { Sheet1: { A1: 1, B1: 2, C1: '=SUMIF((A1:A1~B1:B1),">0")' } },
+    },
+    cell: "Sheet1!C1",
+    expect: 3,
+    note: "Calc SUMIF accepts a ~ union criteria range",
+  },
+  {
+    id: "sumif-overlap",
+    pri: "P1",
+    book: {
+      sheets: { Sheet1: { A1: 1, A2: 2, B1: '=SUMIF((A1:A2~A1),">0")' } },
+    },
+    cell: "Sheet1!B1",
+    expect: 4,
+    note: "Calc SUMIF counts overlapping union cells twice",
+  },
+  {
+    id: "countif-union",
+    pri: "P1",
+    book: {
+      sheets: { Sheet1: { A1: 1, B1: 2, C1: '=COUNTIF((A1:A1~B1:B1),">0")' } },
+    },
+    cell: "Sheet1!C1",
+    expect: 2,
+    note: "Calc COUNTIF accepts a ~ union",
+  },
+  {
+    id: "averageif-union",
+    pri: "P1",
+    book: {
+      sheets: { Sheet1: { A1: 1, B1: 5, C1: '=AVERAGEIF((A1:A1~B1:B1),">0")' } },
+    },
+    cell: "Sheet1!C1",
+    expect: 3,
+    note: "Calc AVERAGEIF accepts a ~ union",
+  },
 ];
 
 function runCase(c) {

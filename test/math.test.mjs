@@ -15,6 +15,12 @@ function compute(cells) {
   return JSON.parse(res.stdout).sheets.Sheet1;
 }
 
+function computeBook(book) {
+  const res = run(JSON.stringify(book));
+  assert.equal(res.status, 0, res.stderr);
+  return JSON.parse(res.stdout).sheets;
+}
+
 test("AVERAGE averages a column range", () => {
   const out = compute({ A1: 1, A2: 2, A3: 3, B1: "=AVERAGE(A1:A3)" });
   assert.equal(out.B1, 2);
@@ -387,6 +393,86 @@ test("COUNTIF (?-i) matches one case and (?i) still matches all cases", () => {
   });
   assert.equal(out.B1, 1);
   assert.equal(out.B2, 3);
+});
+
+test("SUMIF, COUNTIF, and AVERAGEIF accept a union criteria range", () => {
+  const out = compute({
+    A1: 1,
+    B1: 2,
+    C1: '=SUMIF((A1:A1~B1:B1),">0")',
+    C2: '=COUNTIF((A1:A1~B1:B1),">0")',
+    A2: 1,
+    B2: 5,
+    C3: '=AVERAGEIF((A2:A2~B2:B2),">0")',
+    A4: 1,
+    B4: 1,
+    D4: 1,
+    C4: '=COUNTIF((A4~B4~D4),">0")',
+  });
+  assert.equal(out.C1, 3);
+  assert.equal(out.C2, 2);
+  assert.equal(out.C3, 3);
+  assert.equal(out.C4, 3);
+});
+
+test("SUMIF counts an overlapping union cell twice", () => {
+  const out = compute({
+    A1: 1,
+    A2: 2,
+    B1: '=SUMIF((A1:A2~A1),">0")',
+    B2: '=COUNTIF((A1:A2~A1),">0")',
+  });
+  assert.equal(out.B1, 4);
+  assert.equal(out.B2, 3);
+});
+
+test("a union criteria range can sit on two sheets", () => {
+  const sheets = computeBook({
+    sheets: {
+      Sheet1: {
+        A1: 1,
+        B1: '=SUMIF((Sheet1!A1~Sheet2!A1),">0")',
+        B2: '=COUNTIF((Sheet1!A1~Sheet2!A1),">0")',
+        B3: '=AVERAGEIF((Sheet1!A1~Sheet2!A1),">0")',
+      },
+      Sheet2: { A1: 5 },
+    },
+  });
+  assert.equal(sheets.Sheet1.B1, 6);
+  assert.equal(sheets.Sheet1.B2, 2);
+  assert.equal(sheets.Sheet1.B3, 3);
+});
+
+test("SUMIF, COUNTIF, and AVERAGEIF reject a sheet-span criteria range", () => {
+  const sheets = computeBook({
+    sheets: {
+      Sheet1: {
+        A1: 1,
+        B1: '=SUMIF(Sheet1!A1:Sheet2!A1,">0")',
+        B2: '=COUNTIF(Sheet1!A1:Sheet2!A1,">0")',
+        B3: '=AVERAGEIF(Sheet1!A1:Sheet2!A1,">0")',
+      },
+      Sheet2: { A1: 2 },
+    },
+  });
+  assert.deepEqual(sheets.Sheet1.B1, { error: "#VALUE!" });
+  assert.deepEqual(sheets.Sheet1.B2, { error: "#VALUE!" });
+  assert.deepEqual(sheets.Sheet1.B3, { error: "#VALUE!" });
+});
+
+test("SUMIF and AVERAGEIF reject a union when a sum range is given", () => {
+  const out = compute({
+    A1: 1,
+    B1: 2,
+    C1: 10,
+    D1: 20,
+    E1: '=SUMIF((A1:A1~B1:B1),">0",C1:D1)',
+    E2: '=AVERAGEIF((A1:A1~B1:B1),">0",C1:D1)',
+    E3: '=SUMIF(A1:A1,">0",(C1:C1~D1:D1))',
+  });
+  assert.deepEqual(out.E1, { error: "#VALUE!" });
+  assert.deepEqual(out.E2, { error: "#VALUE!" });
+  assert.deepEqual(out.E3, { error: "#VALUE!" });
 });
 
 test("COUNTIF, SUMIF, and AVERAGEIF accept an inline (?i) flag", () => {

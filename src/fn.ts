@@ -474,7 +474,7 @@ function sumif(args: readonly Expr[], host: FnHost): Value {
   if (framed.kind === "error") return framed;
   let total = 0;
   let bad: Value | null = null;
-  eachMatch(framed.range, framed.anchor, framed.crit, host, (value) => {
+  eachMatch(framed.areas, framed.anchor, framed.crit, host, (value) => {
     if (value.kind === "error") {
       bad = value;
       return false;
@@ -493,7 +493,7 @@ function averageif(args: readonly Expr[], host: FnHost): Value {
   let total = 0;
   let n = 0;
   let bad: Value | null = null;
-  eachMatch(framed.range, framed.anchor, framed.crit, host, (value) => {
+  eachMatch(framed.areas, framed.anchor, framed.crit, host, (value) => {
     if (value.kind === "error") {
       bad = value;
       return false;
@@ -516,7 +516,7 @@ function countif(args: readonly Expr[], host: FnHost): Value {
   const framed = frame(args, host, false);
   if (framed.kind === "error") return framed;
   let n = 0;
-  eachMatch(framed.range, framed.range, framed.crit, host, () => {
+  eachMatch(framed.areas, framed.anchor, framed.crit, host, () => {
     n += 1;
     return true;
   });
@@ -527,45 +527,62 @@ function frame(
   args: readonly Expr[],
   host: FnHost,
   allowSum: boolean,
-): { kind: "ok"; range: Area; anchor: Area; crit: Crit } | { kind: "error"; code: ErrorCode } {
+): { kind: "ok"; areas: Area[]; anchor: Area | null; crit: Crit } | { kind: "error"; code: ErrorCode } {
   const max = allowSum ? 3 : 2;
   if (args.length < 2 || args.length > max) return { kind: "error", code: "#VALUE!" };
   const rangeExpr = args[0];
   const critExpr = args[1];
   if (rangeExpr === undefined || critExpr === undefined) return { kind: "error", code: "#VALUE!" };
-  const range = asRange(rangeExpr, host);
-  if ("code" in range) return range;
+  const areas = areasOf(rangeExpr, host);
+  if ("code" in areas) return areas;
   const crit = criteriaFrom(critExpr, host);
   if (crit.kind === "error") return crit;
-  let anchor = range;
+  let anchor: Area | null = null;
   if (allowSum && args.length === 3) {
+    if (areas.length !== 1) return { kind: "error", code: "#VALUE!" };
     const sumExpr = args[2];
     if (sumExpr === undefined) return { kind: "error", code: "#VALUE!" };
     const sumRange = asRange(sumExpr, host);
     if ("code" in sumRange) return sumRange;
     anchor = sumRange;
   }
-  return { kind: "ok", range, anchor, crit };
+  return { kind: "ok", areas, anchor, crit };
 }
 
 function eachMatch(
-  range: Area,
-  anchor: Area,
+  areas: readonly Area[],
+  anchor: Area | null,
   crit: Crit,
   host: FnHost,
   fn: (value: Value) => boolean,
 ): void {
-  const width = range.col1 - range.col0 + 1;
-  const height = range.row1 - range.row0 + 1;
-  for (let r = 0; r < height; r++) {
-    for (let c = 0; c < width; c++) {
-      const cell = host.cell(range.sheet, range.col0 + c, range.row0 + r);
-      if (cell.kind === "error") continue;
-      if (!matches(cell, crit)) continue;
-      const summed = host.cell(anchor.sheet, anchor.col0 + c, anchor.row0 + r);
-      if (!fn(summed)) return;
+  for (const range of areas) {
+    const origin = anchor ?? range;
+    const width = range.col1 - range.col0 + 1;
+    const height = range.row1 - range.row0 + 1;
+    for (let r = 0; r < height; r++) {
+      for (let c = 0; c < width; c++) {
+        const cell = host.cell(range.sheet, range.col0 + c, range.row0 + r);
+        if (cell.kind === "error") continue;
+        if (!matches(cell, crit)) continue;
+        const summed = host.cell(origin.sheet, origin.col0 + c, origin.row0 + r);
+        if (!fn(summed)) return;
+      }
     }
   }
+}
+
+function areasOf(expr: Expr, host: FnHost): Area[] | { kind: "error"; code: ErrorCode } {
+  if (expr.kind === "union") {
+    const left = areasOf(expr.left, host);
+    if ("code" in left) return left;
+    const right = areasOf(expr.right, host);
+    if ("code" in right) return right;
+    return left.concat(right);
+  }
+  const area = asRange(expr, host);
+  if ("code" in area) return area;
+  return [area];
 }
 
 function asRange(expr: Expr, host: FnHost): Area | { kind: "error"; code: ErrorCode } {

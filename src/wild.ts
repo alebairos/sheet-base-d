@@ -1,3 +1,4 @@
+import { formatNumber } from "./numfmt.js";
 import type { Value } from "./value.js";
 
 const META = /[\][.*+?^${}()|\\]/;
@@ -11,7 +12,7 @@ export function criteriaText(value: Value): string | null {
     case "text":
       return value.t;
     case "number":
-      return value.n === 0 ? "0" : String(value.n);
+      return formatNumber(value.n);
     case "bool":
       return value.b ? "1" : "0";
     default:

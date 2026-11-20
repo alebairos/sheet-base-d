@@ -1,6 +1,7 @@
 import { asNumber, raise } from "./eval.js";
 import { logicFns } from "./logic.js";
 import { lookupFns } from "./lookup.js";
+import { formatNumber } from "./numfmt.js";
 import { textFns } from "./text.js";
 import { criteriaMatch, criteriaText, foldCriteria } from "./wild.js";
 import type { Expr } from "./parse.js";
@@ -600,7 +601,7 @@ function parseCriteria(value: Value): Crit {
     case "blank":
       return { kind: "num", op: "eq", n: 0, textAlso: false, text: "0" };
     case "number":
-      return { kind: "num", op: "eq", n: value.n, textAlso: false, text: numText(value.n) };
+      return { kind: "num", op: "eq", n: value.n, textAlso: false, text: formatNumber(value.n) };
     case "bool":
       return {
         kind: "num",
@@ -731,11 +732,6 @@ function textOrder(a: string, b: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
-}
-
-function numText(n: number): string {
-  if (n === 0) return "0";
-  return String(n);
 }
 
 function near(a: number, b: number): boolean {

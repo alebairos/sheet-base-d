@@ -538,6 +538,35 @@ test("arithmetic rejects malformed number text", () => {
   assert.deepEqual(out.A5, { error: "#VALUE!" });
 });
 
+test("regex criteria match a number the way concatenation prints it", () => {
+  const out = compute({
+    A1: 1e20,
+    B1: 5,
+    A2: 1e-7,
+    A3: -1e20,
+    C1: '=A1&""',
+    C2: '=COUNTIF(A1,"1E\\+020")',
+    C3: '=SUMIF(A1,"1E\\+020")',
+    C4: '=MATCH("1E\\+020",A1,0)',
+    C5: '=VLOOKUP("1E\\+020",A1:B1,2,FALSE)',
+    C6: '=A2&""',
+    C7: '=COUNTIF(A2,"0\\.0000001")',
+    C8: '=COUNTIF(A2,"1[eE]-7")',
+    C9: '=A3&""',
+    C10: '=COUNTIF(A3,"-1E\\+020")',
+  });
+  assert.equal(out.C1, "1E+020");
+  assert.equal(out.C2, 1);
+  assert.equal(out.C3, 1e20);
+  assert.equal(out.C4, 1);
+  assert.equal(out.C5, 5);
+  assert.equal(out.C6, "0.0000001");
+  assert.equal(out.C7, 1);
+  assert.equal(out.C8, 0);
+  assert.equal(out.C9, "-1E+020");
+  assert.equal(out.C10, 1);
+});
+
 test("STDEV is the sample standard deviation", () => {
   const out = compute({
     A1: "=STDEV(1,2,3)",

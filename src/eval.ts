@@ -443,7 +443,8 @@ export function asText(value: Value): { kind: "text"; t: string } | Err {
 }
 
 function parseNumericText(raw: string): number | null {
-  const t = raw.trim();
+  const hadLeadingSpace = /^\s/.test(raw);
+  const t = raw.trim().replaceAll("\u2212", "-");
   if (t === "") return null;
   const word = t.toUpperCase();
   if (word === "TRUE") return 1;
@@ -465,15 +466,32 @@ function parseNumericText(raw: string): number | null {
     /^([+-]\s*)?((?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*(%)?$/.exec(
       text,
     );
-  if (match === null) return null;
-  const sign = match[1]?.charAt(0) ?? "";
-  const body = match[2];
-  const percent = match[3];
-  if (body === undefined) return null;
-  const n = Number(sign + body.replace(/,/g, ""));
-  if (!Number.isFinite(n)) return null;
-  const scaled = percent === "%" ? n / 100 : n;
-  return negative ? -scaled : scaled;
+  if (match !== null) {
+    const sign = match[1]?.charAt(0) ?? "";
+    const body = match[2];
+    const percent = match[3];
+    if (body === undefined) return null;
+    const n = Number(sign + body.replace(/,/g, ""));
+    if (!Number.isFinite(n)) return null;
+    const scaled = percent === "%" ? n / 100 : n;
+    return negative ? -scaled : scaled;
+  }
+
+  const frac =
+    /^([+-]\s*)?((?:\d{1,3}(?:,\d{3})+|\d+))\s+(\d+)\s*\/\s*(\d+)$/.exec(text);
+  if (frac === null || hadLeadingSpace) return null;
+  const sign = frac[1]?.charAt(0) ?? "";
+  if (negative && sign !== "") return null;
+  const whole = frac[2];
+  const numer = frac[3];
+  const denom = frac[4];
+  if (whole === undefined || numer === undefined || denom === undefined) return null;
+  const den = Number(denom);
+  if (den === 0) return null;
+  const mag = Number(whole.replace(/,/g, "")) + Number(numer) / den;
+  if (!Number.isFinite(mag)) return null;
+  const signed = sign === "-" ? -mag : mag;
+  return negative ? -signed : signed;
 }
 
 function finiteNumber(n: number): Value {

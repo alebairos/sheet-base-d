@@ -548,6 +548,46 @@ test("arithmetic coerces en-US formatted number text", () => {
   assert.equal(out.A12, -1000);
 });
 
+test("arithmetic coerces mixed fractions and a unicode minus", () => {
+  const out = compute({
+    A1: '="1 1/2"+0',
+    A2: '="-1 1/2"+0',
+    A3: '="(1 1/2)"+0',
+    A4: '="1 1 / 2"+0',
+    A5: '="1 10/2"+0',
+    A6: '="\u22121"+0',
+    A7: '="\u22121,000"+0',
+    A8: '="\u22121 1/2"+0',
+    A9: '="\u2212 1"+0',
+  });
+  assert.equal(out.A1, 1.5);
+  assert.equal(out.A2, -1.5);
+  assert.equal(out.A3, -1.5);
+  assert.equal(out.A4, 1.5);
+  assert.equal(out.A5, 6);
+  assert.equal(out.A6, -1);
+  assert.equal(out.A7, -1000);
+  assert.equal(out.A8, -1.5);
+  assert.equal(out.A9, -1);
+});
+
+test("arithmetic rejects mixed-fraction text that stays text", () => {
+  const out = compute({
+    A1: '=" 1 1/2"+0',
+    A2: '="1 1/2%"+0',
+    A3: '="1 1/0"+0',
+    A4: '="(-1 1/2)"+0',
+    A5: '="½"+0',
+    A6: '="1/2"+0',
+  });
+  assert.deepEqual(out.A1, { error: "#VALUE!" });
+  assert.deepEqual(out.A2, { error: "#VALUE!" });
+  assert.deepEqual(out.A3, { error: "#VALUE!" });
+  assert.deepEqual(out.A4, { error: "#VALUE!" });
+  assert.deepEqual(out.A5, { error: "#VALUE!" });
+  assert.deepEqual(out.A6, { error: "#VALUE!" });
+});
+
 test("arithmetic rejects malformed number text", () => {
   const out = compute({
     A1: '="1,5"+0',

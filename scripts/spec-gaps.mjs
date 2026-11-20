@@ -6359,6 +6359,38 @@ const cases = [
     expect: { error: "#VALUE!" },
     note: "a space before #REF! on an absolute column is a syntax error",
   },
+  {
+    id: "dot-digit-hash",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "=.5.5#" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#VALUE!" },
+    note: "a hash glued after digits on a leading-dot name is a syntax error, exported as #VALUE!",
+  },
+  {
+    id: "dot-digit-hash-digit",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "=.5.5#2" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#VALUE!" },
+    note: "a hash and a digit glued after digits on a leading-dot name stay a syntax error",
+  },
+  {
+    id: "dot-digit-hash-long",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "=.05.5#" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#VALUE!" },
+    note: "the same hash after a longer run of digits on both sides of the second dot",
+  },
+  {
+    id: "dot-digit-hash-ref",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "=.5.5#REF!" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#NAME?" },
+    note: "canary: a glued #REF! after digits on a leading-dot name stays #NAME?",
+  },
 ];
 
 function runCase(c) {

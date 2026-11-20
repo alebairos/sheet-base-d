@@ -159,10 +159,13 @@ class Parser {
       return;
     }
     // .5.5 and .5. and .5e2.3 are names. .5.5.5 stays the number .5 beside the name .5.5.
+    // .5.5# is a syntax error. .5.# stays a name because the tail ends on the dot.
     if (leadDot && this.ch() === ".") {
-      const end = dotNameTail(this.src, this.i);
+      const dot = this.i;
+      const end = dotNameTail(this.src, dot);
       if (end !== null) {
         this.i = end;
+        if (end > dot + 1 && this.hashBreaksRef()) this.fail();
         this.emitNumberToken({ k: "id", name: this.src.slice(start, this.i) });
         return;
       }

@@ -117,7 +117,8 @@ class Parser {
 
   private readNumber(): void {
     const start = this.i;
-    if (this.ch() === ".") {
+    const leadDot = this.ch() === ".";
+    if (leadDot) {
       this.i++;
       if (!isDigit(this.ch())) this.fail();
       while (isDigit(this.ch())) this.i++;
@@ -128,14 +129,23 @@ class Parser {
         while (isDigit(this.ch())) this.i++;
       }
     }
+    let signedExp = false;
     if (this.ch() === "e" || this.ch() === "E") {
       let j = this.i + 1;
       const sign = this.src[j] ?? "";
-      if (sign === "+" || sign === "-") j++;
+      const signed = sign === "+" || sign === "-";
+      if (signed) j++;
       if (isDigit(this.src[j] ?? "")) {
+        signedExp = signed;
         this.i = j;
         while (isDigit(this.ch())) this.i++;
       }
+    }
+    // Calc treats 1.2a as a name. A signed exponent, as in 1e+2a, stays a number plus a stray letter.
+    if (!leadDot && !signedExp && (isLetter(this.ch()) || this.ch() === "_")) {
+      while (isNameChar(this.ch())) this.i++;
+      this.tok = { k: "id", name: this.src.slice(start, this.i) };
+      return;
     }
     const text = this.src.slice(start, this.i);
     let n = Number(text);
@@ -438,6 +448,7 @@ class Parser {
       const upper = name.toUpperCase();
       if (upper === "TRUE" || upper === "FALSE") return { kind: "bool", b: upper === "TRUE" };
       if (/^[A-Za-z]{1,3}\d+[A-Za-z_.]/.test(name)) return { kind: "name" };
+      if (isDigit(name[0] ?? "")) return { kind: "name" };
       throw new NameFail();
     }
     if (tok.k === "ref") {

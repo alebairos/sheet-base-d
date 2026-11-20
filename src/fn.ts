@@ -2,7 +2,7 @@ import { asNumber, raise } from "./eval.js";
 import { logicFns } from "./logic.js";
 import { lookupFns } from "./lookup.js";
 import { textFns } from "./text.js";
-import { hasWild, wildRegExp } from "./wild.js";
+import { criteriaMatch, criteriaText } from "./wild.js";
 import type { Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
 
@@ -38,7 +38,7 @@ type Crit =
   | { kind: "blankOrEmpty" }
   | { kind: "nonBlank" }
   | { kind: "emptyText"; op: "gt" | "ge" | "lt" | "le" }
-  | { kind: "text"; op: Op; t: string; wild: RegExp | null };
+  | { kind: "text"; op: Op; t: string };
 
 const EPS = 1 / (16777216 * 16777216);
 
@@ -603,8 +603,7 @@ function parseOperand(op: Op, rest: string, explicit: boolean): Crit {
       text: rest.trim(),
     };
   }
-  const wild = (op === "eq" || op === "ne") && hasWild(rest) ? wildRegExp(rest) : null;
-  return { kind: "text", op, t: rest, wild };
+  return { kind: "text", op, t: rest };
 }
 
 function emptyCriteria(op: Op, explicit: boolean): Crit {
@@ -684,32 +683,9 @@ function matchText(value: Value, crit: Extract<Crit, { kind: "text" }>): boolean
     if (crit.op === "le") return cmp <= 0;
     return cmp >= 0;
   }
-  if (crit.wild !== null) {
-    if (value.kind !== "text") return crit.op === "ne";
-    const hit = crit.wild.test(value.t);
-    return crit.op === "eq" ? hit : !hit;
-  }
-  const rendered = renderForCriteria(value);
-  const eq = rendered !== null && rendered.toUpperCase() === crit.t.toUpperCase();
+  const rendered = criteriaText(value);
+  const eq = rendered !== null && criteriaMatch(crit.t, rendered);
   return crit.op === "eq" ? eq : !eq;
-}
-
-function renderForCriteria(value: Value): string | null {
-  switch (value.kind) {
-    case "text":
-      return value.t;
-    case "number":
-      return numText(value.n);
-    case "bool":
-      return value.b ? "TRUE" : "FALSE";
-    case "blank":
-    case "error":
-      return null;
-    default: {
-      const exhaustive: never = value;
-      return exhaustive;
-    }
-  }
 }
 
 function textOrder(a: string, b: string): number {

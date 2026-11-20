@@ -245,12 +245,12 @@ test("SUMIF matches text without case and skips an error in the criteria range",
     B1: 10,
     B2: 20,
     B3: 30,
-    C1: '=SUMIF(A1:A3,"a*",B1:B3)',
+    C1: '=SUMIF(A1:A3,"apple",B1:B3)',
   });
   assert.equal(out.C1, 10);
 });
 
-test("COUNTIF counts wildcard matches and blanks", () => {
+test("COUNTIF criteria are regular expressions and still count blanks", () => {
   const out = compute({
     A1: "ab",
     A2: "a",
@@ -261,16 +261,37 @@ test("COUNTIF counts wildcard matches and blanks", () => {
     B3: '=COUNTIF(A4:A5,"")',
     B4: "=COUNTIF(A4:A5,0)",
     B5: '=COUNTIF(A4:A5,"=")',
+    B6: '=COUNTIF(A1:A3,"a.*")',
+    B7: '=COUNTIF(A1,"a?")',
     C1: 123,
     C2: "x",
     D1: '=COUNTIF(C1:C2,"*")',
+    D2: '=COUNTIF(C1:C2,".*")',
   });
   assert.equal(out.B1, 1);
-  assert.equal(out.B2, 2);
+  assert.equal(out.B2, 1);
   assert.equal(out.B3, 1);
   assert.equal(out.B4, 1);
   assert.equal(out.B5, 1);
-  assert.equal(out.D1, 1);
+  assert.equal(out.B6, 2);
+  assert.equal(out.B7, 0);
+  assert.equal(out.D1, 0);
+  assert.equal(out.D2, 2);
+});
+
+test("SUMIF and AVERAGEIF criteria are full-match regular expressions", () => {
+  const out = compute({
+    A1: "Apple",
+    A2: "fig",
+    B1: 10,
+    B2: 20,
+    C1: '=SUMIF(A1:A2,"a*",B1:B2)',
+    C2: '=SUMIF(A1:A2,"a.*",B1:B2)',
+    C3: '=AVERAGEIF(A1:A2,"a.*",B1:B2)',
+  });
+  assert.equal(out.C1, 0);
+  assert.equal(out.C2, 10);
+  assert.equal(out.C3, 10);
 });
 
 test("AVERAGEIF averages matches and returns #DIV/0! when none are numeric", () => {

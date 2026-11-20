@@ -2,7 +2,7 @@ import { asNumber } from "./eval.js";
 import type { Fn, FnHost } from "./fn.js";
 import type { Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
-import { hasWild, wildRegExp } from "./wild.js";
+import { criteriaMatch, criteriaText, isCriteriaRegex } from "./wild.js";
 
 type Mode = "exact" | "asc" | "desc";
 type Grid = { sheet: string; c0: number; r0: number; c1: number; r1: number };
@@ -167,11 +167,11 @@ function exactAt(cell: Value, key: Value): boolean {
     return cn !== null && near(cn, kn);
   }
   if (key.kind !== "text") return false;
-  if (cell.kind === "text") {
-    if (hasWild(key.t)) return wildRegExp(key.t).test(cell.t);
-    return cell.t.toUpperCase() === key.t.toUpperCase();
+  if (cell.kind === "text") return criteriaMatch(key.t, cell.t);
+  if (isCriteriaRegex(key.t)) {
+    const rendered = criteriaText(cell);
+    return rendered !== null && criteriaMatch(key.t, rendered);
   }
-  if (hasWild(key.t)) return false;
   const parsed = textNum(key.t);
   const cn = plainNum(cell);
   return parsed !== null && cn !== null && near(cn, parsed);

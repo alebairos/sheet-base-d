@@ -1,32 +1,29 @@
-export function hasWild(text: string): boolean {
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (c === "~") return true;
-    if (c === "*" || c === "?") return true;
-  }
-  return false;
+import type { Value } from "./value.js";
+
+const META = /[\][.*+?^${}()|\\]/;
+
+export function isCriteriaRegex(pattern: string): boolean {
+  return META.test(pattern);
 }
 
-export function wildRegExp(pat: string): RegExp {
-  let src = "^";
-  for (let i = 0; i < pat.length; i++) {
-    const c = pat[i] ?? "";
-    if (c === "~") {
-      const n = pat[i + 1];
-      if (n === "*" || n === "?" || n === "~") {
-        src += escapeReg(n);
-        i += 1;
-        continue;
-      }
-    }
-    if (c === "*") src += "[\\s\\S]*";
-    else if (c === "?") src += ".";
-    else src += escapeReg(c);
+export function criteriaText(value: Value): string | null {
+  switch (value.kind) {
+    case "text":
+      return value.t;
+    case "number":
+      return value.n === 0 ? "0" : String(value.n);
+    case "bool":
+      return value.b ? "1" : "0";
+    default:
+      return null;
   }
-  return new RegExp(`${src}$`, "isu");
 }
 
-function escapeReg(c: string): string {
-  if ("\\^$*+?.()|[]{}".includes(c)) return `\\${c}`;
-  return c;
+export function criteriaMatch(pattern: string, text: string): boolean {
+  if (!isCriteriaRegex(pattern)) return text.toUpperCase() === pattern.toUpperCase();
+  try {
+    return new RegExp(`^(?:${pattern})$`, "iu").test(text);
+  } catch {
+    return text.toUpperCase() === pattern.toUpperCase();
+  }
 }

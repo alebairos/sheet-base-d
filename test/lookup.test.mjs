@@ -88,7 +88,7 @@ test("MATCH descending returns the last equal value in a sorted column", () => {
   assert.deepEqual(out.B5, { error: "#N/A" });
 });
 
-test("MATCH text is case-insensitive and approximate uses text order", () => {
+test("MATCH text is case-insensitive, exact criteria are regex, and approximate uses text order", () => {
   const out = compute({
     A1: "apple",
     A2: "banana",
@@ -97,7 +97,7 @@ test("MATCH text is case-insensitive and approximate uses text order", () => {
     B1: '=MATCH("APPLE",A1:A4,0)',
     B2: '=MATCH("d",A1:A4,1)',
     B3: '=MATCH("aaa",A1:A4,1)',
-    B4: '=MATCH("ap*",A1:A4,0)',
+    B4: '=MATCH("a.*",A1:A4,0)',
     B5: "=MATCH(3,A1:B2,0)",
     B6: "=MATCH(1,5,0)",
     B7: '=MATCH("ap?le",A1:A4,0)',
@@ -108,26 +108,26 @@ test("MATCH text is case-insensitive and approximate uses text order", () => {
   assert.equal(out.B4, 1);
   assert.deepEqual(out.B5, { error: "#VALUE!" });
   assert.deepEqual(out.B6, { error: "#VALUE!" });
-  assert.equal(out.B7, 1);
+  assert.deepEqual(out.B7, { error: "#N/A" });
 });
 
-test("MATCH tilde escapes a literal star and does not crash", () => {
+test("MATCH treats tilde-star as a regex and does not crash", () => {
   const out = compute({
     A1: "a*b",
     A2: "ab",
     B1: '=MATCH("a~*b",A1:A2,0)',
     B2: '=MATCH("*~*",A1:A2,0)',
   }).Sheet1;
-  assert.equal(out.B1, 1);
+  assert.equal(out.B1, 2);
   assert.deepEqual(out.B2, { error: "#N/A" });
 });
 
-test("MATCH question mark matches one Unicode code point", () => {
+test("MATCH question mark is a regex quantifier", () => {
   const out = compute({
     A1: "a😀b",
     B1: '=MATCH("a?b",A1,0)',
   }).Sheet1;
-  assert.equal(out.B1, 1);
+  assert.deepEqual(out.B1, { error: "#N/A" });
 });
 
 test("MATCH equates TRUE with 1 and numeric text with numbers only from the text side", () => {
@@ -333,6 +333,19 @@ test("VLOOKUP rejects a column index outside the table and propagates errors", (
   assert.deepEqual(out.C8, { error: "#DIV/0!" });
   assert.deepEqual(out.C9, { error: "#VALUE!" });
   assert.deepEqual(out.C10, { error: "#VALUE!" });
+});
+
+test("VLOOKUP exact criteria are regular expressions", () => {
+  const out = compute({
+    A1: "apple",
+    B1: 10,
+    A2: "apricot",
+    B2: 20,
+    C1: '=VLOOKUP("a*",A1:B2,2,FALSE)',
+    C2: '=VLOOKUP("a.*",A1:B2,2,FALSE)',
+  }).Sheet1;
+  assert.deepEqual(out.C1, { error: "#N/A" });
+  assert.equal(out.C2, 10);
 });
 
 test("VLOOKUP matches text without case and reads another sheet", () => {

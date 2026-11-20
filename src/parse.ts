@@ -182,7 +182,7 @@ class Parser {
       const digits = this.readDigits();
       if (digits === null) this.fail();
       const next = this.peekNonSpace();
-      if (!absRow && (next === "(" || next === "!")) {
+      if (!absRow && (next === "(" || (next === "!" && cellAddr(letters, digits) === null))) {
         this.tok = { k: "id", name: letters + digits };
         return;
       }
@@ -512,10 +512,9 @@ class Parser {
     const letters = match[1];
     const digits = match[2];
     if (letters === undefined || digits === undefined) return null;
-    const col = columnIndex(letters);
-    const row = Number(digits);
-    if (col === null || !Number.isSafeInteger(row) || row < 1) return null;
-    return { sheet: null, col, row: row - 1, absCol: false, absRow: false };
+    const addr = cellAddr(letters, digits);
+    if (addr === null) return null;
+    return { sheet: null, col: addr.col, row: addr.row, absCol: false, absRow: false };
   }
 
   private takeRef(sheet: string | null): CellRef {
@@ -539,6 +538,15 @@ class Parser {
     if (this.tok.k !== k) this.fail();
     this.bump();
   }
+}
+
+const MAX_COL = 16383;
+
+function cellAddr(letters: string, digits: string): { col: number; row: number } | null {
+  const col = columnIndex(letters);
+  const row = Number(digits);
+  if (col === null || col > MAX_COL || !Number.isSafeInteger(row) || row < 1) return null;
+  return { col, row: row - 1 };
 }
 
 function isComp(op: BinOp): op is "=" | "<>" | "<" | ">" | "<=" | ">=" {

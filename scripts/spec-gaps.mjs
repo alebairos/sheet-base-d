@@ -1685,6 +1685,68 @@ const cases = [
     expect: { error: "#VALUE!" },
     note: "canary: SUM of overflow text stays #VALUE!",
   },
+  {
+    id: "cell-bang-disjoint",
+    pri: "P0",
+    book: { sheets: { Sheet1: { C1: 5, D1: 9, A1: "=C1!D1" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#NULL!" },
+    note: "Calc treats cell!cell as intersection, empty → #NULL!",
+  },
+  {
+    id: "cell-bang-same",
+    pri: "P0",
+    book: { sheets: { Sheet1: { C2: 5, A1: "=C2!C2" } } },
+    cell: "Sheet1!A1",
+    expect: 5,
+    note: "Calc cell!same-cell intersection returns the cell",
+  },
+  {
+    id: "cell-bang-range",
+    pri: "P0",
+    book: {
+      sheets: { Sheet1: { C4: 1, D4: 2, E4: 3, A1: "=D4!C4:E4" } },
+    },
+    cell: "Sheet1!A1",
+    expect: 2,
+    note: "Calc cell!range intersection keeps the overlapping cell",
+  },
+  {
+    id: "cell-bang-vs-sheet-name",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: 1, B1: 2, C1: "=A1!B1" },
+        A1: { B1: 42 },
+      },
+    },
+    cell: "Sheet1!C1",
+    expect: { error: "#NULL!" },
+    note: "Calc prefers cell intersection over a sheet named like a cell",
+  },
+  {
+    id: "cell-bang-canary-range-range",
+    pri: "P1",
+    book: {
+      sheets: { Sheet1: { C3: 1, D3: 2, E3: 3, A1: "=C3:D3!D3:E3" } },
+    },
+    cell: "Sheet1!A1",
+    expect: 2,
+    note: "canary: range!range intersection still works",
+  },
+  {
+    id: "cell-bang-canary-sheet-ref",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=Sheet2!B1" },
+        Sheet2: { B1: 7 },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: 7,
+    note: "canary: real sheet!cell still resolves",
+  },
 ];
 
 function runCase(c) {

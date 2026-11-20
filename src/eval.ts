@@ -325,6 +325,8 @@ function compare(op: "=" | "<>" | "<" | ">" | "<=" | ">=", left: Value, right: V
 }
 
 function order(left: Value, right: Value): NumOrErr {
+  if (left.kind === "blank" && right.kind === "text") left = { kind: "text", t: "" };
+  if (right.kind === "blank" && left.kind === "text") right = { kind: "text", t: "" };
   if (left.kind === "text" && right.kind === "text") {
     const a = left.t.toUpperCase();
     const b = right.t.toUpperCase();

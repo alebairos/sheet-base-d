@@ -285,6 +285,25 @@ test("a blank reference is 0 in arithmetic and empty in concatenation", () => {
   });
 });
 
+test("a blank cell equals an empty string and equals zero", () => {
+  const input = {
+    sheets: {
+      Sheet1: {
+        A1: '=B1=""',
+        A2: '=B1<>""',
+        A3: "=B1=0",
+        A4: '=""=B1',
+        A5: '="x"=B1',
+      },
+    },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: { Sheet1: { A1: true, A2: false, A3: true, A4: true, A5: false } },
+  });
+});
+
 test("a mutual cycle returns #CIRC! and finishes", { timeout: 2000 }, () => {
   const input = { sheets: { Sheet1: { A1: "=B1", B1: "=A1" } } };
   const res = spawnSync(engine, ["-"], {

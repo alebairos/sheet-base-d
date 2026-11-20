@@ -59,7 +59,7 @@ test("LEFT takes the leading characters", () => {
   assert.equal(out.A1, "he");
   assert.equal(out.A2, "h");
   assert.equal(out.A3, "");
-  assert.deepEqual(out.A4, { error: "#VALUE!" });
+  assert.deepEqual(out.A4, { error: "#NUM!" });
   assert.equal(out.A5, "h");
   assert.equal(out.A6, "");
   assert.equal(out.A7, "12");
@@ -84,7 +84,7 @@ test("RIGHT takes the trailing characters", () => {
   assert.equal(out.A1, "lo");
   assert.equal(out.A2, "o");
   assert.equal(out.A3, "");
-  assert.deepEqual(out.A4, { error: "#VALUE!" });
+  assert.deepEqual(out.A4, { error: "#NUM!" });
   assert.equal(out.A5, "o");
   assert.equal(out.A6, "");
   assert.equal(out.A7, "5");
@@ -109,8 +109,8 @@ test("MID extracts a 1-based slice", () => {
   });
   assert.equal(out.A1, "ell");
   assert.equal(out.A2, "");
-  assert.deepEqual(out.A3, { error: "#VALUE!" });
-  assert.deepEqual(out.A4, { error: "#VALUE!" });
+  assert.deepEqual(out.A3, { error: "#NUM!" });
+  assert.deepEqual(out.A4, { error: "#NUM!" });
   assert.equal(out.A5, "he");
   assert.equal(out.A6, "b");
   assert.equal(out.A7, "");
@@ -118,7 +118,7 @@ test("MID extracts a 1-based slice", () => {
   assert.deepEqual(out.A9, { error: "#VALUE!" });
   assert.equal(out.A10, "o");
   assert.equal(out.A11, "😀");
-  assert.deepEqual(out.A12, { error: "#VALUE!" });
+  assert.deepEqual(out.A12, { error: "#NUM!" });
 });
 
 test("LEN counts code points", () => {

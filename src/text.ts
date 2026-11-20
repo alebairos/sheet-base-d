@@ -59,7 +59,7 @@ function mid(args: readonly Expr[], host: FnHost): Value {
   if (text.kind === "error") return text;
   const start = countOf(args[1], host);
   if (start.kind === "error") return start;
-  if (start.n < 1) return { kind: "error", code: "#VALUE!" };
+  if (start.n < 1) return { kind: "error", code: "#NUM!" };
   const count = countOf(args[2], host);
   if (count.kind === "error") return count;
   return { kind: "text", t: slicePoints(text.t, start.n - 1, count.n) };
@@ -95,7 +95,7 @@ function countOf(expr: Expr | undefined, host: FnHost): CountOrErr {
   if (value.kind === "error") return value;
   const n = asNumber(value);
   if (n.kind === "error") return n;
-  if (n.n < 0) return { kind: "error", code: "#VALUE!" };
+  if (n.n < 0) return { kind: "error", code: "#NUM!" };
   return { kind: "count", n: Math.trunc(n.n) };
 }
 

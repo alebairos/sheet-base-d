@@ -574,6 +574,52 @@ test("a lone caret, dollar, or pipe is a literal character", () => {
   assert.equal(out.C17, 0);
 });
 
+test("the first regex match counts only when it covers the whole text", () => {
+  const out = compute({
+    A1: "a",
+    A2: "b",
+    A3: "ab",
+    A4: '=""',
+    C1: 5,
+    B1: '=COUNTIF(A1,"|a")',
+    B2: '=COUNTIF(A4,"|a")',
+    B3: '=COUNTIF(A2,"a||b")',
+    B4: '=COUNTIF(A1,"a||b")',
+    B5: '=COUNTIF(A4,"a||b")',
+    B6: '=COUNTIF(A3,"a|ab")',
+    B7: '=COUNTIF(A3,"ab|a")',
+    B8: '=COUNTIF(A1,"(|a)")',
+    B9: '=COUNTIF(A1,"(a|)")',
+    B10: '=COUNTIF(A4,"(a|)")',
+    B11: '=COUNTIF(A1,"a|")',
+    B12: '=COUNTIF(A4,"a|")',
+    B13: '=COUNTIF(A1,"a*?")',
+    B14: '=COUNTIF(A4,"a*?")',
+    B15: '=MATCH("|a",A1,0)',
+    B16: '=SUMIF(A1,"|a",C1)',
+    B17: '=COUNTIF(A1,"a|b")',
+    B18: '=COUNTIF(A2,"a|b")',
+  });
+  assert.equal(out.B1, 0);
+  assert.equal(out.B2, 1);
+  assert.equal(out.B3, 0);
+  assert.equal(out.B4, 1);
+  assert.equal(out.B5, 1);
+  assert.equal(out.B6, 0);
+  assert.equal(out.B7, 1);
+  assert.equal(out.B8, 0);
+  assert.equal(out.B9, 1);
+  assert.equal(out.B10, 1);
+  assert.equal(out.B11, 1);
+  assert.equal(out.B12, 1);
+  assert.equal(out.B13, 0);
+  assert.equal(out.B14, 1);
+  assert.deepEqual(out.B15, { error: "#N/A" });
+  assert.equal(out.B16, 0);
+  assert.equal(out.B17, 1);
+  assert.equal(out.B18, 1);
+});
+
 test("SUMIF, COUNTIF, and AVERAGEIF accept a union criteria range", () => {
   const out = compute({
     A1: 1,

@@ -32,7 +32,9 @@ export function criteriaMatch(pattern: string, text: string): boolean {
   const compiled = compileCriteria(pattern);
   if (compiled === "never") return false;
   if (compiled === "literal") return foldCriteria(text) === foldCriteria(pattern);
-  return compiled.test(text);
+  const found = compiled.exec(text);
+  // Calc keeps the first match. It counts only when that match covers the whole text.
+  return found !== null && found.index === 0 && found[0].length === text.length;
 }
 
 type Mode = { i: boolean; s: boolean; m: boolean; x: boolean };
@@ -51,7 +53,8 @@ function compileCriteria(pattern: string): RegExp | "never" | "literal" {
   const body = readSeq(scan, false, mode);
   if (body === null) return "never";
   try {
-    return new RegExp(`^(?:${body})$`, "u");
+    // No outer ^(?:...)$. That anchor retries a later alternative or a longer lazy match. Calc does not.
+    return new RegExp(body, "u");
   } catch (err) {
     // A one-character broken pattern stays a literal, so * matches *.
     // A longer dangling * + ? or an unclosed group or class matches nothing.

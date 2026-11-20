@@ -590,6 +590,8 @@ class Parser {
   }
 
   private expect(k: "(" | ")" | "!"): void {
+    // Calc supplies missing closing parentheses when the expression is already complete.
+    if (k === ")" && this.tok.k === "eof") return;
     if (this.tok.k !== k) this.fail();
     this.bump();
   }

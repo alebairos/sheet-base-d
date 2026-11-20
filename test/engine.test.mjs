@@ -295,6 +295,43 @@ test("a collation tie is neither less nor greater and is not equal", () => {
   });
 });
 
+test("a finished formula keeps its value when closing parentheses are missing", () => {
+  const input = {
+    sheets: {
+      Sheet1: {
+        A1: "=(1+2",
+        A2: "=((1+2",
+        A3: "=SUM(1,2",
+        A4: "=1+(2",
+        A5: "=IF(TRUE,1",
+        A6: '=LEFT("ab"',
+        A7: "=SUM(1,2,",
+        A8: "=1+(",
+        A9: "=(1+2))",
+        B1: 1,
+        B2: 4,
+        A10: "=SUM(B1:B2",
+      },
+    },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout).sheets.Sheet1, {
+    A1: 3,
+    A2: 3,
+    A3: 3,
+    A4: 3,
+    A5: 1,
+    A6: "a",
+    A7: { error: "#VALUE!" },
+    A8: { error: "#VALUE!" },
+    A9: { error: "#VALUE!" },
+    B1: 1,
+    B2: 4,
+    A10: 5,
+  });
+});
+
 test("an unclosed string or a bare hash is #NAME?", () => {
   const input = {
     sheets: {

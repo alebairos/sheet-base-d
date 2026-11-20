@@ -370,6 +370,16 @@ test("MEDIAN picks the middle or the mean of the two middle numbers", () => {
   assert.deepEqual(out.B3, { error: "#VALUE!" });
 });
 
+test("COUNTIF greater-than counts letters after an accented letter", () => {
+  const out = compute({
+    A1: "f",
+    A2: "é",
+    A3: "a",
+    B1: '=COUNTIF(A1:A3,">é")',
+  });
+  assert.equal(out.B1, 1);
+});
+
 test("COUNTIF does not treat ß as ss", () => {
   const out = compute({
     A1: "ss",

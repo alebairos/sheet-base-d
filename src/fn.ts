@@ -2,6 +2,7 @@ import { asNumber, raise } from "./eval.js";
 import { logicFns } from "./logic.js";
 import { lookupFns } from "./lookup.js";
 import { formatNumber } from "./numfmt.js";
+import { textOrder } from "./order.js";
 import { textFns } from "./text.js";
 import { criteriaMatch, criteriaText, foldCriteria } from "./wild.js";
 import type { Expr } from "./parse.js";
@@ -724,14 +725,6 @@ function matchText(value: Value, crit: Extract<Crit, { kind: "text" }>): boolean
   const rendered = criteriaText(value);
   const eq = rendered !== null && criteriaMatch(crit.t, rendered);
   return crit.op === "eq" ? eq : !eq;
-}
-
-function textOrder(a: string, b: string): number {
-  const left = foldCriteria(a);
-  const right = foldCriteria(b);
-  if (left < right) return -1;
-  if (left > right) return 1;
-  return 0;
 }
 
 function near(a: number, b: number): boolean {

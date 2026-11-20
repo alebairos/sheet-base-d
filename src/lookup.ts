@@ -1,8 +1,9 @@
 import { asNumber, scalarRangeCell } from "./eval.js";
 import { oneArea, type Area, type Arg, type Fn, type FnHost } from "./fn.js";
+import { textOrder } from "./order.js";
 import type { Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
-import { criteriaMatch, criteriaText, foldCriteria, isCriteriaRegex } from "./wild.js";
+import { criteriaMatch, criteriaText, isCriteriaRegex } from "./wild.js";
 
 type Mode = "exact" | "asc" | "desc";
 type Grid = { sheet: string; c0: number; r0: number; c1: number; r1: number };
@@ -207,7 +208,7 @@ function rel(cell: Value, key: Value): Rank {
     return cmpNum(cn, kn);
   }
   if (key.kind !== "text") return "stop";
-  if (cell.kind === "text") return cmpText(cell.t, key.t);
+  if (cell.kind === "text") return textOrder(cell.t, key.t);
   const parsed = textNum(key.t);
   const cn = plainNum(cell);
   if (parsed === null || cn === null) return "stop";
@@ -229,13 +230,6 @@ function textNum(text: string): number | null {
 function cmpNum(left: number, right: number): -1 | 0 | 1 {
   if (near(left, right)) return 0;
   return left < right ? -1 : 1;
-}
-
-function cmpText(left: string, right: string): -1 | 0 | 1 {
-  const a = foldCriteria(left);
-  const b = foldCriteria(right);
-  if (a === b) return 0;
-  return a < b ? -1 : 1;
 }
 
 function near(a: number, b: number): boolean {

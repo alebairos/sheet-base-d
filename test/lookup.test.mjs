@@ -245,6 +245,17 @@ test("MATCH approximate on an unsorted column finds a later equal and otherwise 
   assert.equal(out.D3, 6);
 });
 
+test("approximate MATCH treats an accented letter as before the next base letter", () => {
+  const out = compute({
+    A1: "é",
+    A2: "f",
+    B1: '=MATCH("f",A1:A2,1)',
+    B2: '=MATCH("e",A1:A2,1)',
+  }).Sheet1;
+  assert.equal(out.B1, 2);
+  assert.deepEqual(out.B2, { error: "#N/A" });
+});
+
 test("approximate text lookup stops at the first greater key", () => {
   const out = compute({
     A1: "a",

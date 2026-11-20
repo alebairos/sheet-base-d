@@ -200,6 +200,37 @@ test("text order case-folds, then sorts lowercase before uppercase", () => {
   });
 });
 
+test("accented letters sort with their base letter and stay unequal to it", () => {
+  const input = {
+    sheets: {
+      Sheet1: {
+        A1: '="é"<"f"',
+        A2: '="f"<"é"',
+        A3: '="ä"<"b"',
+        A4: '="ñ"<"o"',
+        A5: '="Á"<"B"',
+        A6: '="é"="e"',
+        A7: '="e"<"é"',
+      },
+    },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: {
+      Sheet1: {
+        A1: true,
+        A2: false,
+        A3: true,
+        A4: true,
+        A5: true,
+        A6: false,
+        A7: true,
+      },
+    },
+  });
+});
+
 test("an unclosed string or a bare hash is #NAME?", () => {
   const input = {
     sheets: {

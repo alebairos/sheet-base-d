@@ -440,6 +440,46 @@ const cases = [
     expect: 5,
     note: "range!cell intersection",
   },
+  {
+    id: "vlookup-approx-unsorted-hit",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: 100, B1: 1, A2: 50, B2: 2, A3: 200, B3: 3, C1: "=VLOOKUP(50,A1:B3,2,TRUE)" },
+      },
+    },
+    cell: "Sheet1!C1",
+    expect: 2,
+    note: "Calc approximate VLOOKUP finds an equal key after a larger value",
+  },
+  {
+    id: "match-approx-unsorted-hit",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: 100, A2: 50, A3: 200, B1: "=MATCH(50,A1:A3,1)" } } },
+    cell: "Sheet1!B1",
+    expect: 2,
+    note: "Calc approximate MATCH finds an equal key after a larger value",
+  },
+  {
+    id: "vlookup-approx-unsorted-miss",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: 100, B1: 1, A2: 50, B2: 2, A3: 200, B3: 3, C1: "=VLOOKUP(75,A1:B3,2,TRUE)" },
+      },
+    },
+    cell: "Sheet1!C1",
+    expect: { error: "#N/A" },
+    note: "Calc approximate VLOOKUP of a between-key on unsorted rows is #N/A",
+  },
+  {
+    id: "match-approx-unsorted-miss",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: 100, A2: 50, A3: 200, B1: "=MATCH(75,A1:A3,1)" } } },
+    cell: "Sheet1!B1",
+    expect: { error: "#N/A" },
+    note: "Calc approximate MATCH of a between-key on unsorted rows is #N/A",
+  },
 ];
 
 function runCase(c) {

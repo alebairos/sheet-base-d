@@ -233,8 +233,8 @@ class Parser {
     if (letters === null) {
       if (this.ch() !== "_") this.fail();
       while (isNameChar(this.ch())) this.i++;
-      // _foo# is a syntax error, same as ABC#.
-      if (this.ch() === "#") this.fail();
+      // _foo# and _foo # are syntax errors, same as ABC#.
+      if (this.peekNonSpace() === "#") this.fail();
       this.tok = { k: "id", name: this.src.slice(start, this.i) };
       return;
     }
@@ -251,8 +251,8 @@ class Parser {
       // A1B is a name. A valid address with nothing name-like after it stays a cell.
       if (!absRow && isNameChar(this.ch()) && cellAddr(letters, digits) !== null) {
         while (isNameChar(this.ch())) this.i++;
-        // A1B# is a syntax error, same as ABC#.
-        if (this.ch() === "#") this.fail();
+        // A1B# and A1B # are syntax errors, same as ABC#.
+        if (this.peekNonSpace() === "#") this.fail();
         this.tok = { k: "id", name: this.src.slice(start, this.i) };
         return;
       }
@@ -260,8 +260,8 @@ class Parser {
       return;
     }
     while (isNameChar(this.ch())) this.i++;
-    // ABC# is a syntax error. A hash that starts a token, as in 1#2, stays a name.
-    if (this.ch() === "#") this.fail();
+    // ABC# and ABC # are syntax errors. A hash that starts a token, as in 1#2, stays a name.
+    if (this.peekNonSpace() === "#") this.fail();
     this.tok = { k: "id", name: this.src.slice(start, this.i) };
   }
 

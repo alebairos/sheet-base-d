@@ -100,7 +100,7 @@ class Parser {
       this.readNumber();
       return;
     }
-    if (c === "$" || isLetter(c) || c === "_") {
+    if (c === "$" || isLetter(c) || c === "_" || isSepSpace(c)) {
       this.readNameOrRef();
       return;
     }
@@ -250,8 +250,14 @@ class Parser {
     const start = this.i;
     const letters = this.readLetters();
     if (letters === null) {
-      if (this.ch() !== "_") this.fail();
-      while (isNameChar(this.ch())) this.i++;
+      // =1+\u00a02 is a name. The space does not continue the letters in =A\u00a01.
+      if (isSepSpace(this.ch())) {
+        while (isNameChar(this.ch()) || isSepSpace(this.ch())) this.i++;
+      } else if (this.ch() === "_") {
+        while (isNameChar(this.ch())) this.i++;
+      } else {
+        this.fail();
+      }
       // _foo# and _foo # are syntax errors, same as ABC#.
       if (this.peekNonSpace() === "#") this.fail();
       this.tok = { k: "id", name: this.src.slice(start, this.i) };
@@ -862,7 +868,11 @@ function isDigit(c: string): boolean {
 }
 
 function isLetter(c: string): boolean {
-  return (c >= "A" && c <= "Z") || (c >= "a" && c <= "z");
+  return /\p{L}/u.test(c);
+}
+
+function isSepSpace(c: string): boolean {
+  return c === "\u00a0" || c === "\u2003" || c === "\u2009" || c === "\u3000";
 }
 
 function isNameChar(c: string): boolean {

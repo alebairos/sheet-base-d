@@ -778,3 +778,35 @@ test("SUM of a sheet span intersected with itself adds every shared sheet", () =
   assert.equal(res.status, 0, res.stderr);
   assert.equal(JSON.parse(res.stdout).sheets.Sheet1.B1, 7);
 });
+
+test("a Unicode letter or separator space is an unknown name", () => {
+  const name = { error: "#NAME?" };
+  const res = run(
+    ["-"],
+    JSON.stringify({
+      sheets: {
+        Sheet1: {
+          A1: "=é",
+          A2: "=Helloé",
+          A3: "=A1é",
+          A4: "=Ａ",
+          A5: "=1+\u00a02",
+          A6: "=1+\u20032",
+          A7: "=1+\u20092",
+          A8: "=1+\u30002",
+        },
+      },
+    }),
+  );
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout).sheets.Sheet1, {
+    A1: name,
+    A2: name,
+    A3: name,
+    A4: name,
+    A5: name,
+    A6: name,
+    A7: name,
+    A8: name,
+  });
+});

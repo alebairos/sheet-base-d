@@ -686,6 +686,69 @@ test("regex criteria match a number the way concatenation prints it", () => {
   assert.equal(out.C10, 1);
 });
 
+test("COUNTIF, SUMIF, and AVERAGEIF keep spaces on a numeric criterion", () => {
+  const out = compute({
+    A1: " 2",
+    B1: 10,
+    A2: "2",
+    B2: 20,
+    A3: 2,
+    B3: 30,
+    A4: "2 ",
+    B4: 40,
+    A5: " ",
+    A7: "a",
+    A8: " true",
+    A9: " TRUE",
+    C1: '=COUNTIF(A1," 2")',
+    C2: '=COUNTIF(A2," 2")',
+    C3: '=COUNTIF(A3," 2")',
+    C4: '=COUNTIF(A1,"2")',
+    C5: '=COUNTIF(A4,"2 ")',
+    C6: '=COUNTIF(A2,"2 ")',
+    C7: '=SUMIF(A1," 2",B1)',
+    C8: '=AVERAGEIF(A1," 2",B1)',
+    C9: '=SUMIF(A2," 2",B2)',
+    C10: '=AVERAGEIF(A2," 2",B2)',
+    C11: '=COUNTIF(A1,"= 2")',
+    C12: '=COUNTIF(A2,"<> 2")',
+    C13: '=COUNTIF(A1,"<> 2")',
+    C14: '=COUNTIF(A6,"= ")',
+    C15: '=COUNTIF(A5,"= ")',
+    C16: '=COUNTIF(A6,"=")',
+    C17: '=COUNTIF(A3,"> 1")',
+    C18: '=COUNTIF(A1:A4," 2")',
+    C19: '=SUMIF(A1:A4," 2",B1:B4)',
+    C20: '=COUNTIF(A7,"> ")',
+    C21: '=COUNTIF(A5,"> ")',
+    C22: '=COUNTIF(A8," TRUE")',
+    C23: '=COUNTIF(A9," true")',
+  });
+  assert.equal(out.C1, 1);
+  assert.equal(out.C2, 0);
+  assert.equal(out.C3, 1);
+  assert.equal(out.C4, 0);
+  assert.equal(out.C5, 1);
+  assert.equal(out.C6, 0);
+  assert.equal(out.C7, 10);
+  assert.equal(out.C8, 10);
+  assert.equal(out.C9, 0);
+  assert.deepEqual(out.C10, { error: "#DIV/0!" });
+  assert.equal(out.C11, 1);
+  assert.equal(out.C12, 1);
+  assert.equal(out.C13, 0);
+  assert.equal(out.C14, 0);
+  assert.equal(out.C15, 1);
+  assert.equal(out.C16, 1);
+  assert.equal(out.C17, 1);
+  assert.equal(out.C18, 2);
+  assert.equal(out.C19, 40);
+  assert.equal(out.C20, 1);
+  assert.equal(out.C21, 0);
+  assert.equal(out.C22, 1);
+  assert.equal(out.C23, 1);
+});
+
 test("STDEV is the sample standard deviation", () => {
   const out = compute({
     A1: "=STDEV(1,2,3)",

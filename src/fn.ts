@@ -626,7 +626,7 @@ function parseTextCriteria(raw: string): Crit {
   if (opMatch !== null) {
     const opText = opMatch[1];
     const rest = opMatch[2];
-    if (opText !== undefined && rest !== undefined) return parseOperand(opOf(opText), rest.trim(), true);
+    if (opText !== undefined && rest !== undefined) return parseOperand(opOf(opText), rest, true);
   }
   return parseOperand("eq", raw, false);
 }
@@ -640,7 +640,7 @@ function parseOperand(op: Op, rest: string, explicit: boolean): Crit {
       op,
       n: coerced.n,
       textAlso: op === "eq" || op === "ne",
-      text: rest.trim(),
+      text: rest,
     };
   }
   return { kind: "text", op, t: rest };

@@ -1,2 +1,6 @@
 node_modules/
 dist/
+
+decisions.tsv
+.done-natural
+.done

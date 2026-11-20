@@ -229,6 +229,8 @@ function exactAt(cell: Value, key: Value): boolean {
     const rendered = criteriaText(cell);
     return rendered !== null && criteriaMatch(key.t, rendered);
   }
+  const word = key.t.toUpperCase();
+  if (word === "TRUE" || word === "FALSE") return cell.kind === "bool" && cell.b === (word === "TRUE");
   const parsed = textNum(key.t);
   const cn = plainNum(cell);
   return parsed !== null && cn !== null && near(cn, parsed);

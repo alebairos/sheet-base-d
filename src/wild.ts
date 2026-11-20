@@ -3,8 +3,11 @@ import type { Value } from "./value.js";
 
 const META = /[\][.*+?^${}()|\\]/;
 
+// `{` and `}` do not start a regex. a{2} is the literal text. A later metacharacter still compiles {n}.
+const REGEX_META = /[\][.*+?^$()|\\]/;
+
 export function isCriteriaRegex(pattern: string): boolean {
-  return META.test(pattern);
+  return REGEX_META.test(pattern);
 }
 
 export function criteriaText(value: Value): string | null {

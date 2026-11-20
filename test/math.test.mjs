@@ -1378,6 +1378,42 @@ test("the first error Calc pops sticks for the rest of the formula", () => {
   assert.deepEqual(out.B13, { error: "#DIV/0!" });
 });
 
+test("a brace pair is literal until another metacharacter makes the criterion a regex", () => {
+  const out = compute({
+    A1: "a{2}",
+    A2: "aa",
+    A3: "A{2}",
+    A4: "aax",
+    A5: "a{2}x",
+    A6: "a{2",
+    A7: "{",
+    A8: "a{2,1}",
+    B1: '=COUNTIF(A1,"a{2}")',
+    B2: '=COUNTIF(A2,"a{2}")',
+    B3: '=COUNTIF(A3,"a{2}")',
+    B4: '=MATCH("a{2}",A1,0)',
+    B5: '=SUMIF(A1,"a{2}",C1)',
+    C1: 4,
+    B6: '=COUNTIF(A4,"a{2}.*")',
+    B7: '=COUNTIF(A5,"a{2}.*")',
+    B8: '=COUNTIF(A6,"a{2")',
+    B9: '=COUNTIF(A7,"[a{2}]")',
+    B10: '=COUNTIF(A1,"a\\{2\\}")',
+    B11: '=COUNTIF(A8,"a{2,1}+")',
+  });
+  assert.equal(out.B1, 1);
+  assert.equal(out.B2, 0);
+  assert.equal(out.B3, 1);
+  assert.equal(out.B4, 1);
+  assert.equal(out.B5, 4);
+  assert.equal(out.B6, 1);
+  assert.equal(out.B7, 0);
+  assert.equal(out.B8, 1);
+  assert.equal(out.B9, 1);
+  assert.equal(out.B10, 1);
+  assert.equal(out.B11, 0);
+});
+
 test("STDEV is the sample standard deviation", () => {
   const out = compute({
     A1: "=STDEV(1,2,3)",

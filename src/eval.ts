@@ -60,6 +60,13 @@ export function resolveSheet(ctx: EvalCtx, name: string | null): string | null {
   return found;
 }
 
+export function shownCell(ctx: EvalCtx, sheet: string, col: number, row: number): Value {
+  const value = computeCell(ctx, sheet, col, row);
+  const input = ctx.cells.get(cellKey(sheet, col, row));
+  if (input?.kind === "formula") return presentValue(value);
+  return value;
+}
+
 export function computeCell(ctx: EvalCtx, sheet: string, col: number, row: number): Value {
   const key = cellKey(sheet, col, row);
   const cached = ctx.cache.get(key);
@@ -539,13 +546,29 @@ function parseNumericText(raw: string): number | null {
 
 function finiteNumber(n: number): Value {
   if (!Number.isFinite(n)) return { kind: "error", code: "#NUM!" };
-  return { kind: "number", n: normalize(n) };
+  return { kind: "number", n: snap(n) };
+}
+
+// Arithmetic keeps the binary value. Rounding to 15 significant digits happens
+// only when a formula result is published, so SQRT(2)^2 still lands on 2.
+function snap(n: number): number {
+  if (n === 0) return 0;
+  if (Number.isInteger(n) && Math.abs(n) < 1e16) return n;
+  const nearest = Math.round(n);
+  if (approxEqual(n, nearest) || approxEqual(nearest, n)) return nearest;
+  return n;
+}
+
+export function presentValue(value: Value): Value {
+  if (value.kind !== "number") return value;
+  const n = normalize(value.n);
+  return n === value.n ? value : { kind: "number", n };
 }
 
 function normalize(n: number): number {
-  if (n === 0) return 0;
-  if (Number.isInteger(n) && Math.abs(n) < 1e16) return n;
-  const rounded = roundSig(n, 15);
+  const snapped = snap(n);
+  if (snapped === 0 || (Number.isInteger(snapped) && Math.abs(snapped) < 1e16)) return snapped;
+  const rounded = roundSig(snapped, 15);
   const nearest = Math.round(rounded);
   if (approxEqual(rounded, nearest) || approxEqual(nearest, rounded)) return nearest;
   return rounded;

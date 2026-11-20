@@ -1,5 +1,5 @@
 import { parseA1, type CellAddr } from "./addr.js";
-import { computeCell, createEvalCtx, evalUnindexed, resolveSheet } from "./eval.js";
+import { createEvalCtx, evalUnindexed, presentValue, resolveSheet, shownCell } from "./eval.js";
 import { decodeCell, encodeCell, isJsonObject, type CellJson, type Value } from "./value.js";
 
 export type InputCell = Value | { kind: "formula"; src: string };
@@ -46,7 +46,11 @@ export function computeWorkbook(wb: Workbook): ComputedWorkbook {
     const out: Record<string, Value> = {};
     for (const [key, cell] of Object.entries(cells)) {
       const addr = parseA1(key);
-      const value = addr ? computeCell(ctx, name, addr.col, addr.row) : evalUnindexed(ctx, name, cell);
+      const value = addr
+        ? shownCell(ctx, name, addr.col, addr.row)
+        : cell.kind === "formula"
+          ? presentValue(evalUnindexed(ctx, name, cell))
+          : evalUnindexed(ctx, name, cell);
       if (value.kind !== "blank") out[key] = value;
     }
     sheets[name] = out;
@@ -71,5 +75,5 @@ export function lookupCell(wb: Workbook, ref: { sheet: string; addr: CellAddr })
   const ctx = createEvalCtx(wb);
   const sheet = resolveSheet(ctx, ref.sheet);
   if (sheet === null) return { kind: "error", code: "#REF!" };
-  return computeCell(ctx, sheet, ref.addr.col, ref.addr.row);
+  return shownCell(ctx, sheet, ref.addr.col, ref.addr.row);
 }

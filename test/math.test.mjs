@@ -242,6 +242,27 @@ test("SQRT of a negative number is #NUM!", () => {
   assert.equal(out.A3, 0);
 });
 
+test("SQRT(2)^2 is 2 and the 15-digit root still prints as itself", () => {
+  const out = compute({
+    A1: "=SQRT(2)^2",
+    A2: "=SQRT(2)^2=2",
+    A3: "=SQRT(2)*SQRT(2)=2",
+    A4: "=POWER(SQRT(2),2)",
+    A5: "=(2^0.5)^2=2",
+    A6: "=SQRT(2)",
+    B6: "=A6^2",
+    A7: "=1.4142135623731^2=2",
+  });
+  assert.equal(out.A1, 2);
+  assert.equal(out.A2, true);
+  assert.equal(out.A3, true);
+  assert.equal(out.A4, 2);
+  assert.equal(out.A5, true);
+  assert.equal(out.A6, 1.4142135623731);
+  assert.equal(out.B6, 2);
+  assert.equal(out.A7, false);
+});
+
 test("PRODUCT multiplies numbers and rejects text literals", () => {
   const out = compute({
     A1: 2,

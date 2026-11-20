@@ -179,6 +179,22 @@ const cases = [
     expect: { error: "#N/A" },
     note: "regex a?b is optional a then b, so it misses a😀b",
   },
+  {
+    id: "vlookup-col0",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: 1, B1: 10, C1: "=VLOOKUP(1,A1:B1,0,FALSE)" } } },
+    cell: "Sheet1!C1",
+    expect: { error: "#NUM!" },
+    note: "Calc Err:502 for VLOOKUP column index < 1",
+  },
+  {
+    id: "index-neg",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: 1, A2: 2, B1: "=INDEX(A1:A2,-1)" } } },
+    cell: "Sheet1!B1",
+    expect: { error: "#NUM!" },
+    note: "Calc Err:502 for negative INDEX",
+  },
 ];
 
 function runCase(c) {

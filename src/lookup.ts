@@ -30,7 +30,7 @@ function vlookup(args: readonly Expr[], host: FnHost): Value {
   const col = whole(host.scalar(colExpr));
   if (typeof col !== "number") return col;
   const width = table.c1 - table.c0 + 1;
-  if (col < 1 || col > width) return err("#VALUE!");
+  if (col < 1 || col > width) return err("#NUM!");
   const approx = args.length === 3 ? true : flag(args[3], host);
   if (typeof approx !== "boolean") return approx;
   const hit = findIndex(column(table, table.c0, host), key, approx ? "asc" : "exact");
@@ -52,7 +52,7 @@ function index(args: readonly Expr[], host: FnHost): Value {
   if (args.length === 4) {
     const area = whole(scalarAt(args[3], host));
     if (typeof area !== "number") return area;
-    if (area < 1) return err("#VALUE!");
+    if (area < 1) return err("#NUM!");
     if (area !== 1) return err("#REF!");
   }
   return pick(grid, pos.row, pos.col, host);
@@ -275,7 +275,8 @@ function whole(value: Value): number | Err {
   const n = asNumber(value);
   if (n.kind === "error") return n;
   const t = Math.trunc(n.n);
-  if (!Number.isSafeInteger(t) || t < 0) return err("#VALUE!");
+  if (!Number.isSafeInteger(t)) return err("#VALUE!");
+  if (t < 0) return err("#NUM!");
   return t;
 }
 

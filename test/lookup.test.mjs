@@ -218,7 +218,7 @@ test("INDEX reads a row and column, a column vector, and a row vector", () => {
   assert.deepEqual(out.D6, { error: "#VALUE!" });
 });
 
-test("INDEX uses #REF! past the range and #VALUE! for a negative or multi-cell result", () => {
+test("INDEX uses #REF! past the range, #NUM! for a negative index or area, and #VALUE! for a multi-cell result", () => {
   const out = compute({
     A1: 11,
     B1: 12,
@@ -240,14 +240,14 @@ test("INDEX uses #REF! past the range and #VALUE! for a negative or multi-cell r
   }).Sheet1;
   assert.deepEqual(out.D1, { error: "#REF!" });
   assert.deepEqual(out.D2, { error: "#REF!" });
-  assert.deepEqual(out.D3, { error: "#VALUE!" });
+  assert.deepEqual(out.D3, { error: "#NUM!" });
   assert.deepEqual(out.D4, { error: "#VALUE!" });
   assert.deepEqual(out.D5, { error: "#VALUE!" });
   assert.equal(out.D6, 12);
   assert.equal(out.D7, 21);
   assert.deepEqual(out.D8, { error: "#REF!" });
   assert.deepEqual(out.D9, { error: "#REF!" });
-  assert.deepEqual(out.D10, { error: "#VALUE!" });
+  assert.deepEqual(out.D10, { error: "#NUM!" });
   assert.deepEqual(out.D11, { error: "#VALUE!" });
 });
 
@@ -306,7 +306,7 @@ test("VLOOKUP exact takes the first row and approximate takes the last row that 
   assert.equal(out.C8, 3);
 });
 
-test("VLOOKUP rejects a column index outside the table and propagates errors", () => {
+test("VLOOKUP returns #NUM! for a column index outside the table and propagates errors", () => {
   const out = compute({
     A1: 5,
     B1: "s",
@@ -323,11 +323,11 @@ test("VLOOKUP rejects a column index outside the table and propagates errors", (
     C9: "=VLOOKUP(5,5,1,FALSE)",
     C10: "=VLOOKUP(5,A1:B1)",
   }).Sheet1;
-  assert.deepEqual(out.C1, { error: "#VALUE!" });
-  assert.deepEqual(out.C2, { error: "#VALUE!" });
+  assert.deepEqual(out.C1, { error: "#NUM!" });
+  assert.deepEqual(out.C2, { error: "#NUM!" });
   assert.equal(out.C3, 5);
   assert.equal(out.C4, "s");
-  assert.deepEqual(out.C5, { error: "#VALUE!" });
+  assert.deepEqual(out.C5, { error: "#NUM!" });
   assert.deepEqual(out.C6, { error: "#DIV/0!" });
   assert.deepEqual(out.C7, { error: "#DIV/0!" });
   assert.deepEqual(out.C8, { error: "#DIV/0!" });

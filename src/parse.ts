@@ -148,14 +148,14 @@ class Parser {
     // Calc treats 1.2a as a name. A signed exponent, as in 1e+2a, stays a number plus a stray letter.
     if (!leadDot && !signedExp && (isLetter(this.ch()) || this.ch() === "_")) {
       while (isNameChar(this.ch())) this.i++;
-      this.tok = { k: "id", name: this.src.slice(start, this.i) };
+      this.emitNumberToken({ k: "id", name: this.src.slice(start, this.i) });
       return;
     }
     // 1e2.3 is a name. 1e2.3.4 is that name beside .4. A decimal before the exponent, as in 1.2e3.4, does not glue.
     if (sawExp && !sawDot && this.ch() === "." && isExpDotSuffix(this.src[this.i + 1] ?? "")) {
       this.i++;
       while (isExpDotSuffix(this.ch())) this.i++;
-      this.tok = { k: "id", name: this.src.slice(start, this.i) };
+      this.emitNumberToken({ k: "id", name: this.src.slice(start, this.i) });
       return;
     }
     // .5.5 and .5. and .5e2.3 are names. .5.5.5 stays the number .5 beside the name .5.5.
@@ -163,7 +163,7 @@ class Parser {
       const end = dotNameTail(this.src, this.i);
       if (end !== null) {
         this.i = end;
-        this.tok = { k: "id", name: this.src.slice(start, this.i) };
+        this.emitNumberToken({ k: "id", name: this.src.slice(start, this.i) });
         return;
       }
     }
@@ -179,7 +179,17 @@ class Parser {
     const expAt = text.search(/[eE]/);
     const mag = expAt < 0 ? text : text.slice(0, expAt);
     if (n === 0 && /[1-9]/.test(mag)) n = Number.NaN;
-    this.tok = { k: "num", n };
+    this.emitNumberToken({ k: "num", n });
+  }
+
+  // 1 # and 1.2a # are syntax errors. A glued hash, as in 1#, stays a name.
+  private emitNumberToken(tok: Tok): void {
+    let j = this.i;
+    if (isWs(this.src[j] ?? "")) {
+      while (isWs(this.src[j] ?? "")) j++;
+      if ((this.src[j] ?? "") === "#") this.fail();
+    }
+    this.tok = tok;
   }
 
   private readQuoted(quote: '"' | "'", kind: "str" | "qsheet"): void {

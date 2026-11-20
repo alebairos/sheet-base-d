@@ -44,6 +44,8 @@ const FREE_SPACE = new Set([" ", "\t", "\n", "\r", "\f", "\v"]);
 // (?x) drops free-spacing whitespace and # comments, including inside classes.
 // A flag written inside a character class stays a literal character.
 function compileCriteria(pattern: string): RegExp | "never" | "literal" {
+  // Calc keeps a one-character ^ $ or | as that character. A longer pattern still anchors or alternates.
+  if (pattern === "^" || pattern === "$" || pattern === "|") return "literal";
   const scan: Scan = { src: pattern, i: 0, sawFlag: false };
   const mode: Mode = { i: true, s: false, m: false, x: false };
   const body = readSeq(scan, false, mode);

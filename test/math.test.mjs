@@ -526,6 +526,54 @@ test("a dangling quantifier matches nothing unless the pattern is one character"
   assert.equal(out.C17, 0);
 });
 
+test("a lone caret, dollar, or pipe is a literal character", () => {
+  const out = compute({
+    A1: "^",
+    A2: "$",
+    A3: "|",
+    A4: "a",
+    A5: "b",
+    A6: '=""',
+    A7: "^a",
+    A8: "^^",
+    B1: 5,
+    C1: '=COUNTIF(A1,"^")',
+    C2: '=COUNTIF(A2,"$")',
+    C3: '=COUNTIF(A3,"|")',
+    C4: '=COUNTIF(A6,"^")',
+    C5: '=COUNTIF(A6,"|")',
+    C6: '=COUNTIF(A6,"$")',
+    C7: '=COUNTIF(A4,"^")',
+    C8: '=COUNTIF(A4,"^a")',
+    C9: '=COUNTIF(A7,"^a")',
+    C10: '=COUNTIF(A4:A5,"a|b")',
+    C11: '=COUNTIF(A6,"^^")',
+    C12: '=COUNTIF(A8,"^^")',
+    C13: '=MATCH("^",A1,0)',
+    C14: '=MATCH("^",A6,0)',
+    C15: '=SUMIF(A1,"^",B1)',
+    C16: '=VLOOKUP("^",A1:B1,2,FALSE)',
+    C17: '=COUNTIF(A9,"^")',
+  });
+  assert.equal(out.C1, 1);
+  assert.equal(out.C2, 1);
+  assert.equal(out.C3, 1);
+  assert.equal(out.C4, 0);
+  assert.equal(out.C5, 0);
+  assert.equal(out.C6, 0);
+  assert.equal(out.C7, 0);
+  assert.equal(out.C8, 1);
+  assert.equal(out.C9, 0);
+  assert.equal(out.C10, 2);
+  assert.equal(out.C11, 1);
+  assert.equal(out.C12, 0);
+  assert.equal(out.C13, 1);
+  assert.deepEqual(out.C14, { error: "#N/A" });
+  assert.equal(out.C15, 5);
+  assert.equal(out.C16, 5);
+  assert.equal(out.C17, 0);
+});
+
 test("SUMIF, COUNTIF, and AVERAGEIF accept a union criteria range", () => {
   const out = compute({
     A1: 1,

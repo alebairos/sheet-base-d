@@ -1,5 +1,5 @@
 import { asNumber, scalarRangeCell } from "./eval.js";
-import { oneArea, type Fn, type FnHost } from "./fn.js";
+import { oneArea, type Area, type Arg, type Fn, type FnHost } from "./fn.js";
 import type { Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
 import { criteriaMatch, criteriaText, foldCriteria, isCriteriaRegex } from "./wild.js";
@@ -45,19 +45,35 @@ function index(args: readonly Expr[], host: FnHost): Value {
   if (args.length < 1 || args.length > 4) return err("#VALUE!");
   const refExpr = args[0];
   if (refExpr === undefined) return err("#VALUE!");
-  const grid = gridOf(refExpr, host, "#REF!");
+  const ref = host.arg(refExpr);
+  if (ref.kind === "areas" && ref.areas.length > 1) {
+    const n = readArea(args, host);
+    if (typeof n !== "number") return n;
+    const chosen = ref.areas[n - 1];
+    if (chosen === undefined) return err("#REF!");
+    const grid = gridOfArea(chosen);
+    const pos = indexPos(args, host, grid.r1 - grid.r0 + 1, grid.c1 - grid.c0 + 1);
+    if ("code" in pos) return pos;
+    return pick(grid, pos.row, pos.col, host);
+  }
+  const grid = gridFrom(ref, "#REF!");
   if ("code" in grid) return grid;
-  const height = grid.r1 - grid.r0 + 1;
-  const width = grid.c1 - grid.c0 + 1;
-  const pos = indexPos(args, host, height, width);
+  const pos = indexPos(args, host, grid.r1 - grid.r0 + 1, grid.c1 - grid.c0 + 1);
   if ("code" in pos) return pos;
   if (args.length === 4) {
-    const area = whole(scalarAt(args[3], host));
-    if (typeof area !== "number") return area;
-    if (area < 1) return err("#NUM!");
-    if (area !== 1) return err("#REF!");
+    const n = readArea(args, host);
+    if (typeof n !== "number") return n;
+    if (n !== 1) return err("#REF!");
   }
   return pick(grid, pos.row, pos.col, host);
+}
+
+function readArea(args: readonly Expr[], host: FnHost): number | Err {
+  if (args.length !== 4) return 1;
+  const area = whole(scalarAt(args[3], host));
+  if (typeof area !== "number") return area;
+  if (area < 1) return err("#NUM!");
+  return area;
 }
 
 function match(args: readonly Expr[], host: FnHost): Value {
@@ -245,8 +261,16 @@ function column(grid: Grid, col: number, host: FnHost): Value[] {
 }
 
 function gridOf(expr: Expr, host: FnHost, missing: ErrorCode): Grid | Err {
-  const area = oneArea(host.arg(expr), missing);
+  return gridFrom(host.arg(expr), missing);
+}
+
+function gridFrom(arg: Arg, missing: ErrorCode): Grid | Err {
+  const area = oneArea(arg, missing);
   if ("code" in area) return area;
+  return gridOfArea(area);
+}
+
+function gridOfArea(area: Area): Grid {
   return { sheet: area.sheet, c0: area.col0, r0: area.row0, c1: area.col1, r1: area.row1 };
 }
 

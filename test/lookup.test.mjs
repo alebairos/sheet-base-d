@@ -269,6 +269,23 @@ test("INDEX uses #REF! past the range, #NUM! for a negative index or area, and #
   assert.deepEqual(out.D11, { error: "#VALUE!" });
 });
 
+test("INDEX area selects one range of a union", () => {
+  const out = compute({
+    A1: 1,
+    A2: 4,
+    C1: 9,
+    C2: 8,
+    B1: "=INDEX((A1:A2~C1:C2),2,1,1)",
+    B2: "=INDEX((A1:A2~C1:C2),1,1,2)",
+    B3: "=INDEX((A1:A2~C1:C2),1,1,3)",
+    B4: "=INDEX((A1:A2~C1:C2),1,1,0)",
+  }).Sheet1;
+  assert.equal(out.B1, 4);
+  assert.equal(out.B2, 9);
+  assert.deepEqual(out.B3, { error: "#REF!" });
+  assert.deepEqual(out.B4, { error: "#NUM!" });
+});
+
 test("INDEX intersects one row with the formula column", () => {
   const out = compute({
     A1: 11,

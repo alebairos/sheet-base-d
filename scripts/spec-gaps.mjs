@@ -541,6 +541,30 @@ const cases = [
     expect: 10,
     note: "Calc range with ends on two sheets sums across the sheet span",
   },
+  {
+    id: "index-union-1",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: 1, A2: 4, C1: 9, C2: 8, B1: "=INDEX((A1:A2~C1:C2),2,1,1)" },
+      },
+    },
+    cell: "Sheet1!B1",
+    expect: 4,
+    note: "Calc INDEX area 1 of a union is the first range",
+  },
+  {
+    id: "index-union-2",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: 1, A2: 4, C1: 9, C2: 8, B1: "=INDEX((A1:A2~C1:C2),1,1,2)" },
+      },
+    },
+    cell: "Sheet1!B1",
+    expect: 9,
+    note: "Calc INDEX area 2 of a union is the second range",
+  },
 ];
 
 function runCase(c) {

@@ -469,6 +469,51 @@ test("COUNTIF word and digit classes use Unicode properties", () => {
   assert.equal(out.C9, 0);
 });
 
+test("COUNTIF POSIX classes use Calc Unicode sets", () => {
+  const out = compute({
+    A1: "apple",
+    A2: "123",
+    A3: "é",
+    A4: "\u0663",
+    A5: "a b",
+    A6: "A",
+    A7: " ",
+    A8: "\n",
+    B1: '=COUNTIF(A1,"[[:alpha:]]+")',
+    B2: '=COUNTIF(A1,"[[:alpha:]]")',
+    B3: '=COUNTIF(A2,"[[:digit:]]+")',
+    B4: '=COUNTIF(A2,"[:digit:]+")',
+    B5: '=COUNTIF(A3,"[[:alpha:]]")',
+    B6: '=COUNTIF(A4,"[[:digit:]]")',
+    B7: '=COUNTIF(A5,"[[:alpha:][:space:]]+")',
+    B8: '=COUNTIF(A1,"[[:digit:]]+")',
+    B9: '=COUNTIF(A6,"(?-i)[[:upper:]]")',
+    B10: '=COUNTIF(A6,"(?-i)[[:lower:]]")',
+    C1: '=COUNTIF(A7,"[[:blank:]]")',
+    C2: '=COUNTIF(A8,"[[:blank:]]")',
+    C3: '=COUNTIF(A8,"[[:space:]]")',
+    C4: '=COUNTIF(A1,"[:foo:]+")',
+    C5: '=COUNTIF(A2,"[a[:digit:]]+")',
+    C6: '=COUNTIF(A1,"[[:^digit:]]+")',
+  });
+  assert.equal(out.B1, 1);
+  assert.equal(out.B2, 0);
+  assert.equal(out.B3, 1);
+  assert.equal(out.B4, 1);
+  assert.equal(out.B5, 1);
+  assert.equal(out.B6, 1);
+  assert.equal(out.B7, 1);
+  assert.equal(out.B8, 0);
+  assert.equal(out.B9, 1);
+  assert.equal(out.B10, 0);
+  assert.equal(out.C1, 1);
+  assert.equal(out.C2, 0);
+  assert.equal(out.C3, 1);
+  assert.equal(out.C4, 0);
+  assert.equal(out.C5, 1);
+  assert.equal(out.C6, 1);
+});
+
 test("COUNTIF does not treat ß as ss", () => {
   const out = compute({
     A1: "ss",

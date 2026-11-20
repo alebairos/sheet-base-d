@@ -48,7 +48,9 @@ const FREE_SPACE = new Set([" ", "\t", "\n", "\r", "\f", "\v"]);
 function compileCriteria(pattern: string): RegExp | "never" | "literal" {
   // Calc keeps a one-character ^ $ or | as that character. A longer pattern still anchors or alternates.
   if (pattern === "^" || pattern === "$" || pattern === "|") return "literal";
-  const scan: Scan = { src: pattern, i: 0, sawFlag: false };
+  const rewritten = rewritePosix(pattern);
+  if (rewritten === "never") return "never";
+  const scan: Scan = { src: rewritten, i: 0, sawFlag: false };
   const mode: Mode = { i: true, s: false, m: false, x: false };
   const body = readSeq(scan, false, mode);
   if (body === null) return "never";
@@ -224,6 +226,114 @@ function readClass(scan: Scan, mode: Mode): string {
 // A class that also lists other characters keeps ASCII \W. JS u-mode cannot spell that union.
 const WORD_PROPS = "\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}";
 const WORD_COMP = "\uE000";
+
+// Calc criteria spell POSIX names as Unicode sets. A name it does not know matches nothing.
+// `add` is the set inside an open class. `drop` is [:^name:] when one property can say it.
+// `bare` is the same set when the name is not already inside brackets.
+type PosixSpell = { add: string | null; drop: string | null; bare: string; bareNeg: string };
+
+const POSIX: Readonly<Record<string, PosixSpell>> = {
+  alpha: prop("\\p{Alphabetic}", "\\P{Alphabetic}"),
+  upper: prop("\\p{Lu}", "\\P{Lu}"),
+  lower: prop("\\p{Ll}", "\\P{Ll}"),
+  digit: prop("\\p{Nd}", "\\P{Nd}"),
+  xdigit: prop("\\p{AHex}", "\\P{AHex}"),
+  alnum: props("\\p{Alphabetic}\\p{Nd}"),
+  word: props(WORD_PROPS),
+  space: prop("\\p{White_Space}", "\\P{White_Space}"),
+  blank: props("\\t\\p{Zs}"),
+  punct: prop("\\p{P}", "\\P{P}"),
+  cntrl: prop("\\p{Cc}", "\\P{Cc}"),
+  ascii: prop("\\p{ASCII}", "\\P{ASCII}"),
+  graph: { add: null, drop: null, bare: "[^\\p{Z}\\p{C}]", bareNeg: "[\\p{Z}\\p{C}]" },
+  print: {
+    add: null,
+    drop: null,
+    bare: "[^\\p{Cc}\\p{Cf}\\p{Cs}\\p{Co}\\p{Cn}\\p{Zl}\\p{Zp}]",
+    bareNeg: "[\\p{Cc}\\p{Cf}\\p{Cs}\\p{Co}\\p{Cn}\\p{Zl}\\p{Zp}]",
+  },
+};
+
+function prop(add: string, drop: string): PosixSpell {
+  return { add, drop, bare: `[${add}]`, bareNeg: `[${drop}]` };
+}
+
+function props(add: string): PosixSpell {
+  return { add, drop: null, bare: `[${add}]`, bareNeg: `[^${add}]` };
+}
+
+function rewritePosix(pattern: string): string | "never" {
+  let out = "";
+  let i = 0;
+  while (i < pattern.length) {
+    if (pattern[i] === "\\" && i + 1 < pattern.length) {
+      out += pattern.slice(i, i + 2);
+      i += 2;
+      continue;
+    }
+    const matched = /^\[:(\^)?([A-Za-z]+):\]/.exec(pattern.slice(i));
+    if (matched === null) {
+      out += pattern[i] ?? "";
+      i += 1;
+      continue;
+    }
+    const spec = POSIX[(matched[2] ?? "").toLowerCase()];
+    if (spec === undefined) return "never";
+    const neg = matched[1] === "^";
+    const len = matched[0].length;
+    const open = classOpen(out);
+    if (!neg && spec.add !== null) {
+      out += open === "none" ? spec.bare : spec.add;
+      i += len;
+      continue;
+    }
+    if (neg && spec.drop !== null) {
+      out += open === "none" ? spec.bareNeg : spec.drop;
+      i += len;
+      continue;
+    }
+    if (open === "none") {
+      out += neg ? spec.bareNeg : spec.bare;
+      i += len;
+      continue;
+    }
+    if ((open === "empty" || open === "caret") && pattern[i + len] === "]") {
+      out = open === "caret" ? out.slice(0, -2) : out.slice(0, -1);
+      const useNeg = neg !== (open === "caret");
+      out += useNeg ? spec.bareNeg : spec.bare;
+      i += len + 1;
+      continue;
+    }
+    out += pattern.slice(i, i + len);
+    i += len;
+  }
+  return out;
+}
+
+function classOpen(out: string): "none" | "in" | "empty" | "caret" {
+  let depth = 0;
+  let start = -1;
+  for (let i = 0; i < out.length; i++) {
+    if (out[i] === "\\") {
+      i += 1;
+      continue;
+    }
+    if (out[i] === "[") {
+      depth += 1;
+      start = i;
+      continue;
+    }
+    if (out[i] === "]" && depth > 0) {
+      depth -= 1;
+      start = -1;
+    }
+  }
+  if (depth === 0 || start < 0) return "none";
+  const content = out.slice(start + 1);
+  if (content === "") return "empty";
+  if (content === "^") return "caret";
+  return "in";
+}
 
 function finishClass(body: string): string {
   const negated = body.startsWith("^");

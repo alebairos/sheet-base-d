@@ -4511,6 +4511,30 @@ const cases = [
     expect: 3,
     note: "canary: a bounded column is not the whole column",
   },
+  {
+    id: "countif-posix-alpha",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: "apple", B1: '=COUNTIF(A1,"[[:alpha:]]+")' } } },
+    cell: "Sheet1!B1",
+    expect: 1,
+    note: "Calc [:alpha:] is a Unicode letter set, not the letters of the name",
+  },
+  {
+    id: "countif-posix-digit",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: "123", B1: '=COUNTIF(A1,"[[:digit:]]+")' } } },
+    cell: "Sheet1!B1",
+    expect: 1,
+    note: "Calc [:digit:] matches every decimal digit in the text",
+  },
+  {
+    id: "countif-posix-alpha-short",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "apple", B1: '=COUNTIF(A1,"[[:alpha:]]")' } } },
+    cell: "Sheet1!B1",
+    expect: 0,
+    note: "canary: one POSIX letter does not cover a longer word",
+  },
 ];
 
 function runCase(c) {

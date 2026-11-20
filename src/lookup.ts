@@ -153,10 +153,10 @@ function findIndex(cells: readonly Value[], key: Value, mode: Mode): number | Er
 }
 
 function scan(cells: readonly Value[], key: Value, mode: "asc" | "desc"): number | null {
+  if (mode === "asc" && plainNum(key) !== null) return scanAscNumber(cells, key);
   let loose: number | null = null;
   let equal: number | null = null;
   let ordered = true;
-  const equalPastOrder = mode === "asc" && plainNum(key) !== null;
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
     if (cell === undefined) continue;
@@ -164,7 +164,7 @@ function scan(cells: readonly Value[], key: Value, mode: "asc" | "desc"): number
     if (rank === "skip") continue;
     if (rank === "stop") break;
     if (rank === 0) {
-      if (ordered || equalPastOrder) equal = i;
+      if (ordered) equal = i;
       continue;
     }
     if (!ordered) continue;
@@ -174,7 +174,44 @@ function scan(cells: readonly Value[], key: Value, mode: "asc" | "desc"): number
       continue;
     }
     if (rank < 0) ordered = false;
-    else loose = i;
+    else {
+      loose = i;
+      if (equal !== null) ordered = false;
+    }
+  }
+  return equal ?? loose;
+}
+
+function scanAscNumber(cells: readonly Value[], key: Value): number | null {
+  let loose: number | null = null;
+  let equal: number | null = null;
+  let prev: number | null = null;
+  let phase: "walk" | "descended" | "seek" = "walk";
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i];
+    if (cell === undefined) continue;
+    const rank = rel(cell, key);
+    if (rank === "skip") continue;
+    if (rank === "stop") break;
+    const n = plainNum(cell);
+    if (n === null) break;
+    if (phase === "walk" && equal !== null && prev !== null && cmpNum(n, prev) < 0) phase = "descended";
+    prev = n;
+    if (rank === 0) {
+      if (phase !== "descended") equal = i;
+      continue;
+    }
+    if (phase === "seek") {
+      if (equal !== null) return equal;
+      if (rank < 0) return null;
+      continue;
+    }
+    if (rank > 0) {
+      if (equal !== null || loose !== null) return equal ?? loose;
+      phase = "seek";
+      continue;
+    }
+    loose = i;
   }
   return equal ?? loose;
 }

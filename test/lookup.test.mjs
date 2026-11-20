@@ -245,6 +245,66 @@ test("MATCH approximate on an unsorted column finds a later equal and otherwise 
   assert.equal(out.D3, 6);
 });
 
+test("approximate MATCH takes an equal after a leading greater only when no smaller value comes first", () => {
+  const out = compute({
+    A1: 100,
+    A2: 50,
+    A3: 200,
+    B1: "=MATCH(50,A1:A3,1)",
+    B2: "=MATCH(75,A1:A3,1)",
+    C1: 100,
+    C2: 40,
+    C3: 50,
+    D1: "=MATCH(50,C1:C3,1)",
+    E1: 5,
+    E2: 1,
+    E3: 4,
+    E4: 2,
+    F1: "=MATCH(2,E1:E4,1)",
+    F2: "=MATCH(6,E1:E4,1)",
+  }).Sheet1;
+  assert.equal(out.B1, 2);
+  assert.deepEqual(out.B2, { error: "#N/A" });
+  assert.deepEqual(out.D1, { error: "#N/A" });
+  assert.deepEqual(out.F1, { error: "#N/A" });
+  assert.equal(out.F2, 4);
+});
+
+test("approximate MATCH and VLOOKUP keep the earlier row when a later equal follows a break", () => {
+  const out = compute({
+    A1: 1,
+    B1: 10,
+    A2: 3,
+    B2: 20,
+    A3: 2,
+    B3: 30,
+    C1: "=MATCH(2,A1:A3,1)",
+    C2: "=VLOOKUP(2,A1:B3,2,TRUE)",
+    D1: 10,
+    D2: 5,
+    D3: 10,
+    E1: "=MATCH(10,D1:D3,1)",
+    F1: 50,
+    F2: 100,
+    F3: 50,
+    G1: "=MATCH(50,F1:F3,1)",
+  }).Sheet1;
+  assert.equal(out.C1, 1);
+  assert.equal(out.C2, 10);
+  assert.equal(out.E1, 1);
+  assert.equal(out.G1, 1);
+});
+
+test("descending MATCH keeps the first equal when a greater value follows it", () => {
+  const out = compute({
+    A1: 2,
+    A2: 4,
+    A3: 2,
+    B1: "=MATCH(2,A1:A3,-1)",
+  }).Sheet1;
+  assert.equal(out.B1, 1);
+});
+
 test("approximate MATCH treats an accented letter as before the next base letter", () => {
   const out = compute({
     A1: "é",

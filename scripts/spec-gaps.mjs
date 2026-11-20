@@ -1007,6 +1007,66 @@ const cases = [
     expect: 1,
     note: "Calc relational criteria use the same accent order",
   },
+  {
+    id: "match-approx-lead-gt-later-eq",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: 5, A2: 1, A3: 4, A4: 2, B1: "=MATCH(2,A1:A4,1)" } } },
+    cell: "Sheet1!B1",
+    expect: { error: "#N/A" },
+    note: "Calc approx MATCH does not take a later equal after a lesser value once the first cell was greater",
+  },
+  {
+    id: "match-approx-mid-break-eq",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: 1, A2: 3, A3: 2, B1: "=MATCH(2,A1:A3,1)" } } },
+    cell: "Sheet1!B1",
+    expect: 1,
+    note: "Calc approx MATCH keeps the ordered loose fit and ignores a later equal after a greater value",
+  },
+  {
+    id: "match-approx-dup-descent",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: 10, A2: 5, A3: 10, B1: "=MATCH(10,A1:A3,1)" } } },
+    cell: "Sheet1!B1",
+    expect: 1,
+    note: "Calc approx MATCH keeps the first equal when the list later descends",
+  },
+  {
+    id: "match-approx-gap-before-eq",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: 100, A2: 40, A3: 50, B1: "=MATCH(50,A1:A3,1)" } } },
+    cell: "Sheet1!B1",
+    expect: { error: "#N/A" },
+    note: "Calc approx MATCH is #N/A when a lesser value sits between the lead greater and a later equal",
+  },
+  {
+    id: "match-approx-first-eq-wins",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: 50, A2: 100, A3: 50, B1: "=MATCH(50,A1:A3,1)" } } },
+    cell: "Sheet1!B1",
+    expect: 1,
+    note: "Calc approx MATCH returns the first equal before a greater value",
+  },
+  {
+    id: "vlookup-approx-mid-break",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: 1, B1: 10, A2: 3, B2: 20, A3: 2, B3: 30, C1: "=VLOOKUP(2,A1:B3,2,TRUE)" },
+      },
+    },
+    cell: "Sheet1!C1",
+    expect: 10,
+    note: "Calc approx VLOOKUP keeps the ordered row and ignores a later equal key",
+  },
+  {
+    id: "match-desc-dup-after-greater",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: 2, A2: 4, A3: 2, B1: "=MATCH(2,A1:A3,-1)" } } },
+    cell: "Sheet1!B1",
+    expect: 1,
+    note: "Calc descending MATCH keeps the first equal and ignores one after a greater value",
+  },
 ];
 
 function runCase(c) {

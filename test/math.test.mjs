@@ -806,6 +806,68 @@ test("numeric text keeps space and no-break spaces and rejects a tab", () => {
   assert.equal(out.C9, 10);
 });
 
+test("dollar and outside percent use the same numeric padding", () => {
+  const out = compute({
+    A1: '="$\u00a02"+0',
+    A2: '="$\u202f2"+0',
+    A3: '="$\u00a0+2"+0',
+    A4: '="$\u202f-2"+0',
+    A5: '="$\u00a0\u202f2"+0',
+    A6: '="$\u00a01,000.5"+0',
+    A7: '="(2)\u00a0%"+0',
+    A8: '="(2)\u202f%\u202f"+0',
+    A9: '="(\u00a02\u00a0)\u00a0%"+0',
+    A10: '="(1.5)\u00a0%"+0',
+    A11: '="($\u00a02)"+0',
+    A12: '="+ $2"+0',
+    A13: '="+\u00a0$2"+0',
+    A14: '="-\u202f$\u202f2"+0',
+    A15: '="$\t2"+0',
+    A16: '="(2)\t%"+0',
+    A17: '="+\t$2"+0',
+    A18: '="$\u2003+2"+0',
+    A19: '="($2)%"+0',
+    A20: '="($\u00a0+2)"+0',
+    A21: '="1\u00a01/2"+0',
+    B1: 2,
+    B2: -0.02,
+    B3: -2,
+    C1: '=COUNTIF(B1,"$\u00a02")',
+    C2: '=COUNTIF(B2,"(2)\u00a0%")',
+    C3: '=COUNTIF(B1,"+ $2")',
+    C4: '=COUNTIF(B3,"-\u202f$\u202f2")',
+    C5: '=COUNTIF(B1,"$\t2")',
+    C6: '=COUNTIF(B1,"+\t$2")',
+  });
+  assert.equal(out.A1, 2);
+  assert.equal(out.A2, 2);
+  assert.equal(out.A3, 2);
+  assert.equal(out.A4, -2);
+  assert.equal(out.A5, 2);
+  assert.equal(out.A6, 1000.5);
+  assert.equal(out.A7, -0.02);
+  assert.equal(out.A8, -0.02);
+  assert.equal(out.A9, -0.02);
+  assert.equal(out.A10, -0.015);
+  assert.equal(out.A11, -2);
+  assert.equal(out.A12, 2);
+  assert.equal(out.A13, 2);
+  assert.equal(out.A14, -2);
+  assert.deepEqual(out.A15, { error: "#VALUE!" });
+  assert.deepEqual(out.A16, { error: "#VALUE!" });
+  assert.deepEqual(out.A17, { error: "#VALUE!" });
+  assert.deepEqual(out.A18, { error: "#VALUE!" });
+  assert.deepEqual(out.A19, { error: "#VALUE!" });
+  assert.deepEqual(out.A20, { error: "#VALUE!" });
+  assert.deepEqual(out.A21, { error: "#VALUE!" });
+  assert.equal(out.C1, 1);
+  assert.equal(out.C2, 1);
+  assert.equal(out.C3, 1);
+  assert.equal(out.C4, 1);
+  assert.equal(out.C5, 0);
+  assert.equal(out.C6, 0);
+});
+
 test("STDEV is the sample standard deviation", () => {
   const out = compute({
     A1: "=STDEV(1,2,3)",

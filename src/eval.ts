@@ -482,7 +482,15 @@ function stripNumPad(raw: string): string {
   return raw.slice(start, end);
 }
 
+function stripLeadingNumPad(raw: string): string {
+  let start = 0;
+  while (start < raw.length && isNumPad(raw[start] ?? "")) start++;
+  return raw.slice(start);
+}
+
 const NUM_PAD_CLASS = `[${NUM_PAD}]`;
+const SIGN_BEFORE_DOLLAR = new RegExp(`^([+-])${NUM_PAD_CLASS}*\\$`);
+const OUTSIDE_PERCENT = new RegExp(`^(.*\\))${NUM_PAD_CLASS}*%${NUM_PAD_CLASS}*$`);
 const DECIMAL_TEXT = new RegExp(
   `^([+-]${NUM_PAD_CLASS}*)?((?:(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?)${NUM_PAD_CLASS}*(%)?$`,
 );
@@ -499,15 +507,15 @@ function parseNumericText(raw: string): number | null {
   let negative = false;
   let hadDollar = false;
   let percentOutside = false;
-  const signBeforeDollar = /^([+-])\$/.exec(text);
-  if (signBeforeDollar !== null) text = text.slice(1);
+  const signBeforeDollar = SIGN_BEFORE_DOLLAR.exec(text);
+  if (signBeforeDollar !== null) text = text.slice(signBeforeDollar[0].length - 1);
   if (text.startsWith("$")) {
     hadDollar = true;
     text = text.slice(1);
-    text = text.replace(/^ +/, "");
+    text = stripLeadingNumPad(text);
   }
   if (text.startsWith("(")) {
-    const outsidePercent = /^(.*\)) *% *$/.exec(text);
+    const outsidePercent = OUTSIDE_PERCENT.exec(text);
     const inside = outsidePercent?.[1];
     if (inside !== undefined) {
       percentOutside = true;
@@ -520,7 +528,7 @@ function parseNumericText(raw: string): number | null {
     if (!hadDollar && text.startsWith("$")) {
       hadDollar = true;
       text = text.slice(1);
-      text = text.replace(/^ +/, "");
+      text = stripLeadingNumPad(text);
     }
   }
   if (!hadDollar && text.endsWith("$")) {

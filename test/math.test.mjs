@@ -533,6 +533,9 @@ test("arithmetic coerces en-US formatted number text", () => {
     A10: '="(1000)"+0',
     A11: '="($1,000.25)"+0',
     A12: '="$-1,000"+0',
+    A13: '="(1e2)"+0',
+    A14: '="1,000e2"+0',
+    A15: '="50%"+0',
   });
   assert.equal(out.A1, 12);
   assert.equal(out.A2, 100);
@@ -546,6 +549,9 @@ test("arithmetic coerces en-US formatted number text", () => {
   assert.equal(out.A10, -1000);
   assert.equal(out.A11, -1000.25);
   assert.equal(out.A12, -1000);
+  assert.equal(out.A13, -100);
+  assert.equal(out.A14, 100000);
+  assert.equal(out.A15, 0.5);
 });
 
 test("arithmetic coerces mixed fractions and a unicode minus", () => {
@@ -601,6 +607,33 @@ test("arithmetic rejects malformed number text", () => {
   assert.deepEqual(out.A3, { error: "#VALUE!" });
   assert.deepEqual(out.A4, { error: "#VALUE!" });
   assert.deepEqual(out.A5, { error: "#VALUE!" });
+});
+
+test("arithmetic rejects illegal number-text adornment combinations", () => {
+  const out = compute({
+    A1: '="(-50)"+0',
+    A2: '="(+50)"+0',
+    A3: '="($-50)"+0',
+    A4: '="(50%)"+0',
+    A5: '="$50%"+0',
+    A6: '="$1e2"+0',
+    A7: '="1e2$"+0',
+    A8: '="1e2%"+0',
+    A9: '="1,000 1/2"+0',
+    A10: '="$1 1/2"+0',
+    A11: '="($1 1/2)"+0',
+  });
+  assert.deepEqual(out.A1, { error: "#VALUE!" });
+  assert.deepEqual(out.A2, { error: "#VALUE!" });
+  assert.deepEqual(out.A3, { error: "#VALUE!" });
+  assert.deepEqual(out.A4, { error: "#VALUE!" });
+  assert.deepEqual(out.A5, { error: "#VALUE!" });
+  assert.deepEqual(out.A6, { error: "#VALUE!" });
+  assert.deepEqual(out.A7, { error: "#VALUE!" });
+  assert.deepEqual(out.A8, { error: "#VALUE!" });
+  assert.deepEqual(out.A9, { error: "#VALUE!" });
+  assert.deepEqual(out.A10, { error: "#VALUE!" });
+  assert.deepEqual(out.A11, { error: "#VALUE!" });
 });
 
 test("regex criteria match a number the way concatenation prints it", () => {

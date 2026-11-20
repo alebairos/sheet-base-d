@@ -456,8 +456,13 @@ function parseNumericText(raw: string): number | null {
     negative = true;
     text = text.slice(1, -1).trim();
   }
-  if (text.endsWith("$")) text = text.slice(0, -1);
+  let hadDollar = false;
+  if (text.endsWith("$")) {
+    hadDollar = true;
+    text = text.slice(0, -1);
+  }
   if (text.startsWith("$")) {
+    hadDollar = true;
     text = text.slice(1);
     if (text.startsWith(" ")) text = text.slice(1);
   }
@@ -471,15 +476,18 @@ function parseNumericText(raw: string): number | null {
     const body = match[2];
     const percent = match[3];
     if (body === undefined) return null;
+    const scientific = /[eE]/.test(body);
+    if (negative && sign !== "") return null;
+    if (percent === "%" && (negative || hadDollar)) return null;
+    if (scientific && (hadDollar || percent === "%")) return null;
     const n = Number(sign + body.replace(/,/g, ""));
     if (!Number.isFinite(n)) return null;
     const scaled = percent === "%" ? n / 100 : n;
     return negative ? -scaled : scaled;
   }
 
-  const frac =
-    /^([+-]\s*)?((?:\d{1,3}(?:,\d{3})+|\d+))\s+(\d+)\s*\/\s*(\d+)$/.exec(text);
-  if (frac === null || hadLeadingSpace) return null;
+  const frac = /^([+-]\s*)?(\d+)\s+(\d+)\s*\/\s*(\d+)$/.exec(text);
+  if (frac === null || hadLeadingSpace || hadDollar) return null;
   const sign = frac[1]?.charAt(0) ?? "";
   if (negative && sign !== "") return null;
   const whole = frac[2];
@@ -488,7 +496,7 @@ function parseNumericText(raw: string): number | null {
   if (whole === undefined || numer === undefined || denom === undefined) return null;
   const den = Number(denom);
   if (den === 0) return null;
-  const mag = Number(whole.replace(/,/g, "")) + Number(numer) / den;
+  const mag = Number(whole) + Number(numer) / den;
   if (!Number.isFinite(mag)) return null;
   const signed = sign === "-" ? -mag : mag;
   return negative ? -signed : signed;

@@ -15,7 +15,12 @@ export const logicFns = {
   TRUE: (args) => boolConst(args, true),
   FALSE: (args) => boolConst(args, false),
   ISBLANK: (args, host) => classify(args, host, (value) => value.kind === "blank"),
-  ISNUMBER: (args, host) => classify(args, host, (value) => value.kind === "number" || value.kind === "bool"),
+  ISNUMBER: (args, host) =>
+    classify(
+      args,
+      host,
+      (value) => (value.kind === "number" && value.empty !== true) || value.kind === "bool",
+    ),
   ISTEXT: (args, host) => classify(args, host, (value) => value.kind === "text"),
   ISERROR: (args, host) => classify(args, host, (value) => value.kind === "error"),
 } satisfies { readonly [name: string]: Fn };

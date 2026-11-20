@@ -95,7 +95,8 @@ export function computeCell(ctx: EvalCtx, sheet: string, col: number, row: numbe
 }
 
 function formulaResult(value: Value): Value {
-  if (value.kind === "blank") return { kind: "number", n: 0 };
+  // Calc publishes a blank formula as 0, and that 0 still matches "" and fails ISNUMBER.
+  if (value.kind === "blank") return { kind: "number", n: 0, empty: true };
   return value;
 }
 
@@ -446,7 +447,17 @@ function compare(op: "=" | "<>" | "<" | ">" | "<=" | ">=", left: Value, right: V
   return { kind: "bool", b };
 }
 
+function isEmptyResult(value: Value): boolean {
+  return value.kind === "number" && value.empty === true;
+}
+
 function order(left: Value, right: Value): NumOrErr {
+  if (
+    (isEmptyResult(left) && right.kind === "text" && right.t === "") ||
+    (isEmptyResult(right) && left.kind === "text" && left.t === "")
+  ) {
+    return { kind: "number", n: 0 };
+  }
   if (left.kind === "text" && right.kind === "text") {
     return { kind: "number", n: textCollation(left.t, right.t) };
   }

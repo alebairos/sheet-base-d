@@ -473,6 +473,47 @@ test("a blank reference is 0 in arithmetic and empty in concatenation", () => {
   });
 });
 
+test("a blank formula result equals empty text and is not a number", () => {
+  const input = {
+    sheets: {
+      Sheet1: {
+        A1: "=IF(TRUE,)",
+        B1: '=A1=""',
+        C1: '=A1<""',
+        D1: "=ISNUMBER(A1)",
+        E1: "=A1=0",
+        F1: '=A1&"x"',
+        G1: "=B2",
+        H1: '=G1=""',
+        I1: "=ISNUMBER(G1)",
+        J1: "=0",
+        K1: '=J1=""',
+        L1: "=ISNUMBER(J1)",
+      },
+    },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout), {
+    sheets: {
+      Sheet1: {
+        A1: 0,
+        B1: true,
+        C1: false,
+        D1: false,
+        E1: true,
+        F1: "0x",
+        G1: 0,
+        H1: true,
+        I1: false,
+        J1: 0,
+        K1: false,
+        L1: true,
+      },
+    },
+  });
+});
+
 test("a blank cell equals an empty string and equals zero", () => {
   const input = {
     sheets: {

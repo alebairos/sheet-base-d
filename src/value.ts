@@ -12,7 +12,7 @@ export const ERROR_CODES = [
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
 export type Value =
-  | { kind: "number"; n: number }
+  | { kind: "number"; n: number; empty?: true }
   | { kind: "text"; t: string }
   | { kind: "bool"; b: boolean }
   | { kind: "blank" }

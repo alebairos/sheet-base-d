@@ -593,6 +593,22 @@ const cases = [
     expect: 10,
     note: "Calc approximate text VLOOKUP keeps earlier in-order row",
   },
+  {
+    id: "match-desc-asc",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: 1, A2: 2, A3: 3, B1: "=MATCH(2,A1:A3,-1)" } } },
+    cell: "Sheet1!B1",
+    expect: { error: "#N/A" },
+    note: "Calc descending MATCH on an ascending list is #N/A even with an equal",
+  },
+  {
+    id: "match-desc-break",
+    pri: "P0",
+    book: { sheets: { Sheet1: { G1: 3, G2: 1, G3: 2, H1: "=MATCH(2,G1:G3,-1)" } } },
+    cell: "Sheet1!H1",
+    expect: 1,
+    note: "Calc descending MATCH keeps the first in-order candidate and ignores a later equal after a break",
+  },
 ];
 
 function runCase(c) {

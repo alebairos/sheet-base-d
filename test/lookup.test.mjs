@@ -88,6 +88,21 @@ test("MATCH descending returns the last equal value in a sorted column", () => {
   assert.equal(out.B5, 3);
 });
 
+test("MATCH descending ignores an equal after a value below the key", () => {
+  const out = compute({
+    A1: 1,
+    A2: 2,
+    A3: 3,
+    B1: "=MATCH(2,A1:A3,-1)",
+    G1: 3,
+    G2: 1,
+    G3: 2,
+    H1: "=MATCH(2,G1:G3,-1)",
+  }).Sheet1;
+  assert.deepEqual(out.B1, { error: "#N/A" });
+  assert.equal(out.H1, 1);
+});
+
 test("MATCH and VLOOKUP do not treat ß as ss", () => {
   const out = compute({
     A1: "ss",

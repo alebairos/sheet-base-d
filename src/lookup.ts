@@ -154,7 +154,7 @@ function scan(cells: readonly Value[], key: Value, mode: "asc" | "desc"): number
   let loose: number | null = null;
   let equal: number | null = null;
   let ordered = true;
-  const equalPastOrder = plainNum(key) !== null;
+  const equalPastOrder = mode === "asc" && plainNum(key) !== null;
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
     if (cell === undefined) continue;

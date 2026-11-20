@@ -20,6 +20,7 @@ export type EvalCtx = {
   cache: Map<string, Value>;
   visiting: Set<string>;
   cells: Map<string, InputCell>;
+  sticky: Value | null;
 };
 
 export function cellKey(sheet: string, col: number, row: number): string {
@@ -43,6 +44,7 @@ export function createEvalCtx(workbook: Workbook): EvalCtx {
     cache: new Map(),
     visiting: new Set(),
     cells,
+    sticky: null,
   };
 }
 
@@ -83,7 +85,10 @@ export function computeCell(ctx: EvalCtx, sheet: string, col: number, row: numbe
     return input;
   }
   ctx.visiting.add(key);
+  const savedSticky = ctx.sticky;
+  ctx.sticky = null;
   const stored = evalFormula(input.src, { ...ctx, sheet, col, row });
+  ctx.sticky = savedSticky;
   ctx.visiting.delete(key);
   ctx.cache.set(key, stored);
   return stored;
@@ -116,9 +121,9 @@ export function evalExpr(expr: Expr, ctx: EvalCtx): Value {
     case "blank":
       return expr;
     case "unary":
-      return evalUnary(expr.op, evalExpr(expr.arg, ctx));
+      return evalUnary(expr.op, expr.arg, ctx);
     case "binary":
-      return evalBinary(expr.op, evalExpr(expr.left, ctx), evalExpr(expr.right, ctx));
+      return evalBinary(expr.op, expr.left, expr.right, ctx);
     case "call":
       return evalCall(expr.name, expr.args, ctx);
     case "ref":
@@ -138,17 +143,35 @@ export function evalExpr(expr: Expr, ctx: EvalCtx): Value {
 
 function evalCall(name: string, args: readonly Expr[], ctx: EvalCtx): Value {
   const fn = lookupFn(name);
-  if (fn === undefined) return { kind: "error", code: "#NAME?" };
+  if (fn === undefined) return stick(ctx, { kind: "error", code: "#NAME?" });
   const host: FnHost = {
     arg: (expr) => evalArg(expr, ctx),
     cell: (sheet, col, row) => computeCell(ctx, sheet, col, row),
     number: finiteNumber,
     scalar: (expr) => scalarExpr(expr, ctx),
+    sticky: () => ctx.sticky,
+    stick: (value) => stick(ctx, value),
+    clearSticky: () => {
+      ctx.sticky = null;
+    },
     sheet: ctx.sheet,
     col: ctx.col,
     row: ctx.row,
   };
-  return fn(args, host);
+  const result = fn(args, host);
+  if (ctx.sticky) return ctx.sticky;
+  if (result.kind === "error") {
+    if (name === "IF") return result;
+    return stick(ctx, result);
+  }
+  ctx.sticky = null;
+  return result;
+}
+
+function stick(ctx: EvalCtx, value: Value): Value {
+  if (ctx.sticky) return ctx.sticky;
+  if (value.kind === "error") ctx.sticky = value;
+  return ctx.sticky ?? value;
 }
 
 function scalarExpr(expr: Expr, ctx: EvalCtx): Value {
@@ -285,17 +308,28 @@ export function scalarRangeCell(
   return { col, row: r1 };
 }
 
-function evalUnary(op: "-" | "%", arg: Value): Value {
-  if (arg.kind === "error") return arg;
+function evalUnary(op: "-" | "%", argExpr: Expr, ctx: EvalCtx): Value {
+  const arg = evalExpr(argExpr, ctx);
+  if (ctx.sticky) return ctx.sticky;
+  if (arg.kind === "error") return stick(ctx, arg);
   const n = asNumber(arg);
-  if (n.kind === "error") return n;
+  if (n.kind === "error") return stick(ctx, n);
   if (op === "%") return finiteNumber(n.n / 100);
   return finiteNumber(-n.n);
 }
 
-function evalBinary(op: BinOp, left: Value, right: Value): Value {
-  if (left.kind === "error") return left;
-  if (right.kind === "error") return right;
+function evalBinary(op: BinOp, leftExpr: Expr, rightExpr: Expr, ctx: EvalCtx): Value {
+  const left = evalExpr(leftExpr, ctx);
+  const right = evalExpr(rightExpr, ctx);
+  if (ctx.sticky) return ctx.sticky;
+  if (right.kind === "error") return stick(ctx, right);
+  if (left.kind === "error") return stick(ctx, left);
+  const result = evalBinaryValues(op, left, right);
+  if (result.kind === "error") return stick(ctx, result);
+  return result;
+}
+
+function evalBinaryValues(op: BinOp, left: Value, right: Value): Value {
   switch (op) {
     case "+":
       return num2(left, right, (a, b) => approxAdd(a, b));

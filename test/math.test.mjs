@@ -868,6 +868,40 @@ test("dollar and outside percent use the same numeric padding", () => {
   assert.equal(out.C6, 0);
 });
 
+test("the first error Calc pops sticks for the rest of the formula", () => {
+  const out = compute({
+    A1: "=1/0",
+    A2: "=SQRT(-1)",
+    A3: '="a"+1',
+    B1: "=A1+A2",
+    B2: "=A2+A1",
+    B3: "=(A1+A2)+A3",
+    B4: "=A1+(A2+A3)",
+    B5: "=SUM(A1,A2,A3)",
+    B6: "=SUM(A1:A3)",
+    B7: "=IFERROR(A1+A2,3)+A3",
+    B8: "=ISNUMBER(1/0)+1",
+    B9: "=IF(A1,1,2)+A2",
+    B10: "=IF(TRUE,A1,9)+A3",
+    B11: "=COUNT(1/0)+5",
+    B12: "=MAX(A1,A2)",
+    B13: "=MEDIAN(A1,A2,A3)",
+  });
+  assert.deepEqual(out.B1, { error: "#NUM!" });
+  assert.deepEqual(out.B2, { error: "#DIV/0!" });
+  assert.deepEqual(out.B3, { error: "#NUM!" });
+  assert.deepEqual(out.B4, { error: "#VALUE!" });
+  assert.deepEqual(out.B5, { error: "#VALUE!" });
+  assert.deepEqual(out.B6, { error: "#DIV/0!" });
+  assert.deepEqual(out.B7, { error: "#VALUE!" });
+  assert.equal(out.B8, 1);
+  assert.deepEqual(out.B9, { error: "#DIV/0!" });
+  assert.deepEqual(out.B10, { error: "#VALUE!" });
+  assert.equal(out.B11, 5);
+  assert.deepEqual(out.B12, { error: "#NUM!" });
+  assert.deepEqual(out.B13, { error: "#DIV/0!" });
+});
+
 test("STDEV is the sample standard deviation", () => {
   const out = compute({
     A1: "=STDEV(1,2,3)",

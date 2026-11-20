@@ -1,5 +1,5 @@
 import { asNumber } from "./eval.js";
-import type { Fn, FnHost } from "./fn.js";
+import { popFault, type Fn, type FnHost } from "./fn.js";
 import type { Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
 
@@ -25,7 +25,7 @@ function ifFn(args: readonly Expr[], host: FnHost): Value {
   const condExpr = args[0];
   if (condExpr === undefined) return { kind: "error", code: "#VALUE!" };
   const cond = logical(condExpr, host);
-  if (cond.kind === "error") return cond;
+  if (cond.kind === "error") return host.stick(cond);
   if (args.length === 1) return { kind: "bool", b: cond.b };
   if (cond.b) return branch(args[1], host);
   if (args.length === 2) return { kind: "bool", b: false };
@@ -43,7 +43,10 @@ function ifError(args: readonly Expr[], host: FnHost): Value {
   const fallback = args[1];
   if (valueExpr === undefined || fallback === undefined) return { kind: "error", code: "#VALUE!" };
   const value = host.scalar(valueExpr);
-  if (value.kind === "error") return host.scalar(fallback);
+  if (value.kind === "error" || host.sticky() !== null) {
+    host.clearSticky();
+    return host.scalar(fallback);
+  }
   return value;
 }
 
@@ -73,10 +76,14 @@ function classify(args: readonly Expr[], host: FnHost, pred: (value: Value) => b
   if (args.length !== 1) return { kind: "error", code: "#VALUE!" };
   const expr = args[0];
   if (expr === undefined) return { kind: "error", code: "#VALUE!" };
-  return { kind: "bool", b: pred(host.scalar(expr)) };
+  const value = host.scalar(expr);
+  host.clearSticky();
+  return { kind: "bool", b: pred(value) };
 }
 
 function foldLogic(args: readonly Expr[], host: FnHost, mode: "and" | "or"): Value {
+  const fault = popFault(args, host, "rtl");
+  if (fault) return fault;
   if (args.length === 0) return { kind: "error", code: "#VALUE!" };
   let saw = false;
   let anyTrue = false;

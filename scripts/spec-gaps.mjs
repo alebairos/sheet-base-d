@@ -3533,6 +3533,194 @@ const cases = [
     expect: -0.02,
     note: "canary: a space before an outside % is still numeric",
   },
+  {
+    id: "err-add-right",
+    pri: "P0",
+    book: {
+      sheets: { Sheet1: { A1: "=1/0", A2: "=SQRT(-1)", B1: "=A1+A2" } },
+    },
+    cell: "Sheet1!B1",
+    expect: { error: "#NUM!" },
+    note: "Calc pops the right error first, so #NUM! sticks over #DIV/0!",
+  },
+  {
+    id: "err-add-left",
+    pri: "P0",
+    book: {
+      sheets: { Sheet1: { A1: "=1/0", A2: "=SQRT(-1)", B1: "=A2+A1" } },
+    },
+    cell: "Sheet1!B1",
+    expect: { error: "#DIV/0!" },
+    note: "Calc pops the right #DIV/0! and keeps it",
+  },
+  {
+    id: "err-chain-sticky",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=1/0", A2: "=SQRT(-1)", A3: '="a"+1', B1: "=(A1+A2)+A3" },
+      },
+    },
+    cell: "Sheet1!B1",
+    expect: { error: "#NUM!" },
+    note: "the first popped error stays; a later #VALUE! does not replace it",
+  },
+  {
+    id: "err-chain-paren",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=1/0", A2: "=SQRT(-1)", A3: '="a"+1', B1: "=A1+(A2+A3)" },
+      },
+    },
+    cell: "Sheet1!B1",
+    expect: { error: "#VALUE!" },
+    note: "the parenthesized sum pops #VALUE! before the outer add",
+  },
+  {
+    id: "err-sum-rtl",
+    pri: "P0",
+    book: {
+      sheets: { Sheet1: { A1: "=1/0", A2: "=SQRT(-1)", A3: '="a"+1', B1: "=SUM(A1,A2,A3)" } },
+    },
+    cell: "Sheet1!B1",
+    expect: { error: "#VALUE!" },
+    note: "SUM pops arguments from the right",
+  },
+  {
+    id: "err-sum-range",
+    pri: "P1",
+    book: {
+      sheets: { Sheet1: { A1: "=1/0", A2: "=SQRT(-1)", A3: '="a"+1', B1: "=SUM(A1:A3)" } },
+    },
+    cell: "Sheet1!B1",
+    expect: { error: "#DIV/0!" },
+    note: "canary: a range is still read from the first cell",
+  },
+  {
+    id: "err-sum-text-right",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A2: "=SQRT(-1)", B1: '=SUM(A2,"x")' } } },
+    cell: "Sheet1!B1",
+    expect: { error: "#VALUE!" },
+    note: "a scalar text on the right is popped before the error on the left",
+  },
+  {
+    id: "err-sum-text-left",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A2: "=SQRT(-1)", B1: '=SUM("x",A2)' } } },
+    cell: "Sheet1!B1",
+    expect: { error: "#NUM!" },
+    note: "the right error is popped before scalar text on the left",
+  },
+  {
+    id: "err-iferror-clear",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=1/0", A2: "=SQRT(-1)", A3: '="a"+1', B1: "=IFERROR(A1+A2,3)+A3" },
+      },
+    },
+    cell: "Sheet1!B1",
+    expect: { error: "#VALUE!" },
+    note: "IFERROR clears the caught error before the fallback is used",
+  },
+  {
+    id: "err-isnumber-clear",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: "=ISNUMBER(1/0)+1" } } },
+    cell: "Sheet1!A1",
+    expect: 1,
+    note: "ISNUMBER absorbs #DIV/0! so the addition sees 0",
+  },
+  {
+    id: "err-if-cond-sticks",
+    pri: "P0",
+    book: {
+      sheets: { Sheet1: { A1: "=1/0", A2: "=SQRT(-1)", B1: "=IF(A1,1,2)+A2" } },
+    },
+    cell: "Sheet1!B1",
+    expect: { error: "#DIV/0!" },
+    note: "an error condition sticks against a later operand",
+  },
+  {
+    id: "err-if-branch-open",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=1/0", A3: '="a"+1', B1: "=IF(TRUE,A1,A2)+A3" },
+      },
+    },
+    cell: "Sheet1!B1",
+    expect: { error: "#VALUE!" },
+    note: "a taken IF branch that is an error cell does not stick before the outer operator",
+  },
+  {
+    id: "err-max-rtl",
+    pri: "P0",
+    book: {
+      sheets: { Sheet1: { A1: "=1/0", A2: "=SQRT(-1)", B1: "=MAX(A1,A2)" } },
+    },
+    cell: "Sheet1!B1",
+    expect: { error: "#NUM!" },
+    note: "MAX pops the right argument first",
+  },
+  {
+    id: "err-and-rtl",
+    pri: "P0",
+    book: {
+      sheets: { Sheet1: { A1: "=1/0", A2: "=SQRT(-1)", B1: "=AND(TRUE,A1,A2)" } },
+    },
+    cell: "Sheet1!B1",
+    expect: { error: "#NUM!" },
+    note: "AND pops the right argument first",
+  },
+  {
+    id: "err-median-op",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A2: "=SQRT(-1)", B1: "=MEDIAN(A2,1/0)" } } },
+    cell: "Sheet1!B1",
+    expect: { error: "#DIV/0!" },
+    note: "1/0 sets the sticky error while the argument is evaluated",
+  },
+  {
+    id: "err-median-ltr",
+    pri: "P1",
+    book: {
+      sheets: { Sheet1: { A1: "=1/0", A2: "=SQRT(-1)", A3: '="a"+1', B1: "=MEDIAN(A1,A2,A3)" } },
+    },
+    cell: "Sheet1!B1",
+    expect: { error: "#DIV/0!" },
+    note: "canary: MEDIAN still keeps the first argument error",
+  },
+  {
+    id: "err-count-clear",
+    pri: "P0",
+    book: { sheets: { Sheet1: { A1: "=COUNT(1/0)+5" } } },
+    cell: "Sheet1!A1",
+    expect: 5,
+    note: "COUNT ignores #DIV/0! and the addition still runs",
+  },
+  {
+    id: "err-power-rtl",
+    pri: "P0",
+    book: {
+      sheets: { Sheet1: { A1: "=1/0", A2: "=SQRT(-1)", B1: "=POWER(A1,A2)" } },
+    },
+    cell: "Sheet1!B1",
+    expect: { error: "#NUM!" },
+    note: "POWER pops the exponent first",
+  },
+  {
+    id: "err-left-rtl",
+    pri: "P0",
+    book: {
+      sheets: { Sheet1: { A1: "=1/0", A2: "=SQRT(-1)", B1: "=LEFT(A2,A1)" } },
+    },
+    cell: "Sheet1!B1",
+    expect: { error: "#DIV/0!" },
+    note: "LEFT pops the count before the text",
+  },
 ];
 
 function runCase(c) {

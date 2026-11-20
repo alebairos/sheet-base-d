@@ -18,10 +18,15 @@ export const textFns = {
 } satisfies { readonly [name: string]: Fn };
 
 function concatenate(args: readonly Expr[], host: FnHost): Value {
-  let out = "";
+  const ready: TextOrErr[] = [];
   for (const expr of args) {
-    const text = textOf(expr, host);
-    if (text.kind === "error") return text;
+    ready.push(textOf(expr, host));
+    const stuck = host.sticky();
+    if (stuck) return stuck;
+  }
+  let out = "";
+  for (const text of ready) {
+    if (text.kind === "error") return host.stick(text);
     out += text.t;
   }
   return { kind: "text", t: out };
@@ -32,9 +37,11 @@ function left(args: readonly Expr[], host: FnHost): Value {
   const textExpr = args[0];
   if (textExpr === undefined) return { kind: "error", code: "#VALUE!" };
   const text = textOf(textExpr, host);
-  if (text.kind === "error") return text;
   const count: CountOrErr = args.length === 1 ? { kind: "count", n: 1 } : countOf(args[1], host);
-  if (count.kind === "error") return count;
+  const stuck = host.sticky();
+  if (stuck) return stuck;
+  if (count.kind === "error") return host.stick(count);
+  if (text.kind === "error") return host.stick(text);
   return { kind: "text", t: slicePoints(text.t, 0, count.n) };
 }
 
@@ -43,9 +50,11 @@ function right(args: readonly Expr[], host: FnHost): Value {
   const textExpr = args[0];
   if (textExpr === undefined) return { kind: "error", code: "#VALUE!" };
   const text = textOf(textExpr, host);
-  if (text.kind === "error") return text;
   const count: CountOrErr = args.length === 1 ? { kind: "count", n: 1 } : countOf(args[1], host);
-  if (count.kind === "error") return count;
+  const stuck = host.sticky();
+  if (stuck) return stuck;
+  if (count.kind === "error") return host.stick(count);
+  if (text.kind === "error") return host.stick(text);
   const points = Array.from(text.t);
   const start = points.length > count.n ? points.length - count.n : 0;
   return { kind: "text", t: points.slice(start).join("") };
@@ -56,12 +65,14 @@ function mid(args: readonly Expr[], host: FnHost): Value {
   const textExpr = args[0];
   if (textExpr === undefined) return { kind: "error", code: "#VALUE!" };
   const text = textOf(textExpr, host);
-  if (text.kind === "error") return text;
   const start = countOf(args[1], host);
-  if (start.kind === "error") return start;
-  if (start.n < 1) return { kind: "error", code: "#NUM!" };
   const count = countOf(args[2], host);
-  if (count.kind === "error") return count;
+  const stuck = host.sticky();
+  if (stuck) return stuck;
+  if (count.kind === "error") return host.stick(count);
+  if (start.kind === "error") return host.stick(start);
+  if (text.kind === "error") return host.stick(text);
+  if (start.n < 1) return { kind: "error", code: "#NUM!" };
   return { kind: "text", t: slicePoints(text.t, start.n - 1, count.n) };
 }
 

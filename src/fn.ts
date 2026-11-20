@@ -35,6 +35,9 @@ export type FnHost = {
   cell(sheet: string, col: number, row: number): Value;
   number(n: number): Value;
   scalar(expr: Expr): Value;
+  sticky(): Value | null;
+  stick(value: Value): Value;
+  clearSticky(): void;
   sheet: string;
   col: number;
   row: number;
@@ -87,7 +90,43 @@ export function lookupFn(name: string): Fn | undefined {
   return FNS[name];
 }
 
+// Calc pops arguments from the right. The first error popped sticks, including a
+// scalar text coerced to #VALUE!. Cells inside one range are still read left to right.
+export function popFault(args: readonly Expr[], host: FnHost, order: "ltr" | "rtl"): Value | null {
+  const parts: Arg[] = [];
+  for (const expr of args) {
+    parts.push(host.arg(expr));
+    const stuck = host.sticky();
+    if (stuck) return stuck;
+  }
+  const seq = order === "rtl" ? [...parts].reverse() : parts;
+  for (const arg of seq) {
+    const found = faultIn(arg, host);
+    if (found) return host.stick(found);
+  }
+  return null;
+}
+
+function faultIn(arg: Arg, host: FnHost): Value | null {
+  if (arg.kind === "value") {
+    if (arg.value.kind === "error") return arg.value;
+    if (arg.value.kind === "text") return { kind: "error", code: "#VALUE!" };
+    return null;
+  }
+  for (const area of arg.areas) {
+    for (let row = area.row0; row <= area.row1; row++) {
+      for (let col = area.col0; col <= area.col1; col++) {
+        const cell = host.cell(area.sheet, col, row);
+        if (cell.kind === "error") return cell;
+      }
+    }
+  }
+  return null;
+}
+
 function sum(args: readonly Expr[], host: FnHost): Value {
+  const fault = popFault(args, host, "rtl");
+  if (fault) return fault;
   let total = 0;
   for (const expr of args) {
     const next = addArg(total, host.arg(expr), host);
@@ -178,7 +217,9 @@ function visit(
   }
 }
 
-function collectNumbers(args: readonly Expr[], host: FnHost): number[] | Value {
+function collectNumbers(args: readonly Expr[], host: FnHost, order: "ltr" | "rtl"): number[] | Value {
+  const fault = popFault(args, host, order);
+  if (fault) return fault;
   const out: number[] = [];
   let error: Value | null = null;
   visit(args, host, (value, fromRange) => {
@@ -213,7 +254,7 @@ function takeNumber(value: Value, fromRange: boolean): NumOrErr | { kind: "skip"
 }
 
 function average(args: readonly Expr[], host: FnHost): Value {
-  const xs = collectNumbers(args, host);
+  const xs = collectNumbers(args, host, "rtl");
   if (!Array.isArray(xs)) return xs;
   if (xs.length === 0) return { kind: "error", code: "#DIV/0!" };
   let total = 0;
@@ -222,7 +263,7 @@ function average(args: readonly Expr[], host: FnHost): Value {
 }
 
 function product(args: readonly Expr[], host: FnHost): Value {
-  const xs = collectNumbers(args, host);
+  const xs = collectNumbers(args, host, "rtl");
   if (!Array.isArray(xs)) return xs;
   if (xs.length === 0) return host.number(0);
   let total = 1;
@@ -235,7 +276,7 @@ function product(args: readonly Expr[], host: FnHost): Value {
 }
 
 function median(args: readonly Expr[], host: FnHost): Value {
-  const xs = collectNumbers(args, host);
+  const xs = collectNumbers(args, host, "ltr");
   if (!Array.isArray(xs)) return xs;
   if (xs.length === 0) return { kind: "error", code: "#VALUE!" };
   xs.sort((a, b) => a - b);
@@ -249,7 +290,7 @@ function median(args: readonly Expr[], host: FnHost): Value {
 }
 
 function stdev(args: readonly Expr[], host: FnHost): Value {
-  const xs = collectNumbers(args, host);
+  const xs = collectNumbers(args, host, "rtl");
   if (!Array.isArray(xs)) return xs;
   if (xs.length < 2) return { kind: "error", code: "#DIV/0!" };
   let sum = 0;
@@ -270,6 +311,7 @@ function count(args: readonly Expr[], host: FnHost): Value {
     if (countOne(value, fromRange)) n += 1;
     return true;
   });
+  host.clearSticky();
   return host.number(n);
 }
 
@@ -297,10 +339,13 @@ function counta(args: readonly Expr[], host: FnHost): Value {
     if (value.kind !== "blank" || !fromRange) n += 1;
     return true;
   });
+  host.clearSticky();
   return host.number(n);
 }
 
 function extreme(args: readonly Expr[], host: FnHost, mode: "min" | "max"): Value {
+  const fault = popFault(args, host, "rtl");
+  if (fault) return fault;
   if (args.length === 0) return { kind: "error", code: "#VALUE!" };
   const state: { n: number | null; cellBool: boolean; error: Value | null } = {
     n: null,
@@ -352,15 +397,19 @@ function round(args: readonly Expr[], host: FnHost, mode: RoundMode): Value {
   const first = args[0];
   if (first === undefined) return { kind: "error", code: "#VALUE!" };
   const n = scalarNumber(first, host);
-  if (n.kind === "error") return n;
   let digits = 0;
+  let digitError: Value | null = null;
   if (args.length === 2) {
     const second = args[1];
     if (second === undefined) return { kind: "error", code: "#VALUE!" };
     const d = scalarNumber(second, host);
-    if (d.kind === "error") return d;
-    digits = d.n < 0 ? Math.ceil(d.n) : Math.floor(d.n);
+    if (d.kind === "error") digitError = d;
+    else digits = d.n < 0 ? Math.ceil(d.n) : Math.floor(d.n);
   }
+  const stuck = host.sticky();
+  if (stuck) return stuck;
+  if (digitError) return host.stick(digitError);
+  if (n.kind === "error") return host.stick(n);
   return host.number(applyRound(n.n, digits, mode));
 }
 
@@ -451,9 +500,11 @@ function twoNumbers(
   const right = args[1];
   if (left === undefined || right === undefined) return { kind: "error", code: "#VALUE!" };
   const a = scalarNumber(left, host);
-  if (a.kind === "error") return a;
   const b = scalarNumber(right, host);
+  const stuck = host.sticky();
+  if (stuck?.kind === "error") return stuck;
   if (b.kind === "error") return b;
+  if (a.kind === "error") return a;
   return { kind: "pair", a: a.n, b: b.n };
 }
 

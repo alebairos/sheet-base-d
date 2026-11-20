@@ -716,7 +716,7 @@ function matchNum(value: Value, crit: Extract<Crit, { kind: "num" }>): boolean {
 function matchText(value: Value, crit: Extract<Crit, { kind: "text" }>): boolean {
   if (crit.op === "lt" || crit.op === "gt" || crit.op === "le" || crit.op === "ge") {
     if (value.kind !== "text") return false;
-    const cmp = textCollation(value.t, crit.t);
+    const cmp = textCollation(foldCriteria(value.t), foldCriteria(crit.t));
     if (crit.op === "lt") return cmp < 0;
     if (crit.op === "gt") return cmp > 0;
     if (crit.op === "le") return cmp <= 0;

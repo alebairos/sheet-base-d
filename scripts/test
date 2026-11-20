@@ -8,3 +8,4 @@ node_modules/.bin/tsc --noEmit
 node_modules/.bin/tsc -p tsconfig.ui.json --noEmit
 node --test test/*.mjs
 node --import tsx --test test/ui.test.ts
+node scripts/spec-gaps.mjs

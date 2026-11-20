@@ -452,20 +452,39 @@ function parseNumericText(raw: string): number | null {
 
   let text = t;
   let negative = false;
-  if (text.startsWith("(") && text.endsWith(")")) {
-    negative = true;
-    text = text.slice(1, -1).trim();
-  }
   let hadDollar = false;
-  if (text.endsWith("$")) {
-    hadDollar = true;
-    text = text.slice(0, -1);
-  }
+  let percentOutside = false;
+  const signBeforeDollar = /^([+-])\$/.exec(text);
+  if (signBeforeDollar !== null) text = text.slice(1);
   if (text.startsWith("$")) {
     hadDollar = true;
     text = text.slice(1);
-    if (text.startsWith(" ")) text = text.slice(1);
+    if (text.startsWith(" ") && !text.startsWith(" (")) text = text.slice(1);
   }
+  if (text.startsWith("(")) {
+    const outsidePercent = /^(.*\))%$/.exec(text);
+    const inside = outsidePercent?.[1];
+    if (inside !== undefined) {
+      percentOutside = true;
+      text = inside;
+    }
+  }
+  if (text.startsWith("(") && text.endsWith(")")) {
+    negative = true;
+    text = text.slice(1, -1).trim();
+    if (!hadDollar && text.startsWith("$")) {
+      hadDollar = true;
+      text = text.slice(1);
+      if (text.startsWith(" ") && !text.startsWith(" (")) text = text.slice(1);
+    }
+  }
+  if (!hadDollar && text.endsWith("$")) {
+    hadDollar = true;
+    text = text.slice(0, -1);
+  }
+  if (percentOutside) text += "%";
+  const leadingSign = signBeforeDollar?.[1];
+  if (leadingSign !== undefined) text = leadingSign + text;
 
   const match =
     /^([+-]\s*)?((?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*(%)?$/.exec(
@@ -478,7 +497,7 @@ function parseNumericText(raw: string): number | null {
     if (body === undefined) return null;
     const scientific = /[eE]/.test(body);
     if (negative && sign !== "") return null;
-    if (percent === "%" && (negative || hadDollar)) return null;
+    if (percent === "%" && (hadDollar || (negative && !percentOutside))) return null;
     if (scientific && (hadDollar || percent === "%")) return null;
     const n = Number(sign + body.replace(/,/g, ""));
     if (!Number.isFinite(n)) return null;

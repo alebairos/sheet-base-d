@@ -403,6 +403,61 @@ test("quoted and case-insensitive sheet names resolve", () => {
   });
 });
 
+test("! between two ranges returns their overlap", () => {
+  const input = {
+    sheets: {
+      Sheet1: {
+        A1: 1,
+        B1: 2,
+        C1: 3,
+        A2: 4,
+        B2: 5,
+        C2: 6,
+        A3: 7,
+        B3: 8,
+        C3: 9,
+        A4: "=A1:C3!B2:B2",
+        D2: "=A1:C3!B1:B3",
+        E2: "=A1:C3!B1:C2",
+        F1: "=A1:A1!C3",
+        G1: "=Sheet2!A1",
+      },
+      Sheet2: { A1: 9 },
+    },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  const sheet = JSON.parse(res.stdout).sheets.Sheet1;
+  assert.equal(sheet.A4, 5);
+  assert.equal(sheet.D2, 5);
+  assert.deepEqual(sheet.E2, { error: "#VALUE!" });
+  assert.deepEqual(sheet.F1, { error: "#VALUE!" });
+  assert.equal(sheet.G1, 9);
+});
+
+test("range!cell returns the overlap", () => {
+  const input = {
+    sheets: {
+      Sheet1: {
+        A1: 1,
+        B1: 2,
+        C1: 3,
+        A2: 4,
+        B2: 5,
+        C2: 6,
+        A3: "=A1:C2!B2",
+        D1: "=Sheet2!A1",
+      },
+      Sheet2: { A1: 8 },
+    },
+  };
+  const res = run(["-"], JSON.stringify(input));
+  assert.equal(res.status, 0, res.stderr);
+  const sheet = JSON.parse(res.stdout).sheets.Sheet1;
+  assert.equal(sheet.A3, 5);
+  assert.equal(sheet.D1, 8);
+});
+
 test("ranges used as values follow Calc", () => {
   const input = {
     sheets: {

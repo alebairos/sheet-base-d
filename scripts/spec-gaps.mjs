@@ -333,6 +333,113 @@ const cases = [
     expect: 3,
     note: "Calc regex accepts (?i) inline case fold",
   },
+  {
+    id: "index-row-intersect",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: {
+          A1: 11,
+          B1: 12,
+          C1: 13,
+          A2: 21,
+          B2: 22,
+          C2: 23,
+          A3: 31,
+          B3: 32,
+          C3: 33,
+          B5: "=INDEX(A1:C3,2)",
+        },
+      },
+    },
+    cell: "Sheet1!B5",
+    expect: 22,
+    note: "INDEX row intersects formula column",
+  },
+  {
+    id: "index-col-intersect",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: 11, A2: 21, A3: 31, B2: "=INDEX(A1:A3,0)" },
+      },
+    },
+    cell: "Sheet1!B2",
+    expect: 21,
+    note: "INDEX col with row 0 intersects formula row",
+  },
+  {
+    id: "index-row0-intersect",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: 11, B1: 12, C1: 13, B3: "=INDEX(A1:C1,0)" },
+      },
+    },
+    cell: "Sheet1!B3",
+    expect: 12,
+    note: "INDEX row with row 0 intersects formula column",
+  },
+  {
+    id: "countif-case-off",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: {
+          A1: "Apple",
+          A2: "apple",
+          A3: "APPLE",
+          B1: '=COUNTIF(A1:A3,"(?-i)apple")',
+        },
+      },
+    },
+    cell: "Sheet1!B1",
+    expect: 1,
+    note: "Calc (?-i) turns off case-insensitive regex",
+  },
+  {
+    id: "range-intersect",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: {
+          A1: 1,
+          B1: 2,
+          C1: 3,
+          A2: 4,
+          B2: 5,
+          C2: 6,
+          A3: 7,
+          B3: 8,
+          C3: 9,
+          A4: "=A1:C3!B2:B2",
+        },
+      },
+    },
+    cell: "Sheet1!A4",
+    expect: 5,
+    note: "Calc ! between ranges is intersection",
+  },
+  {
+    id: "range-intersect-cell",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: {
+          A1: 1,
+          B1: 2,
+          C1: 3,
+          A2: 4,
+          B2: 5,
+          C2: 6,
+          A3: "=A1:C2!B2",
+        },
+      },
+    },
+    cell: "Sheet1!A3",
+    expect: 5,
+    note: "range!cell intersection",
+  },
 ];
 
 function runCase(c) {

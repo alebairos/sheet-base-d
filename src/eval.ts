@@ -115,7 +115,8 @@ export function evalExpr(expr: Expr, ctx: EvalCtx): Value {
     case "ref":
       return evalRef(expr.cell, ctx);
     case "range":
-      return evalRange(expr.start, expr.end, ctx);
+    case "intersect":
+      return scalarExpr(expr, ctx);
     default: {
       const exhaustive: never = expr;
       return exhaustive;
@@ -131,6 +132,8 @@ function evalCall(name: string, args: readonly Expr[], ctx: EvalCtx): Value {
     cell: (sheet, col, row) => computeCell(ctx, sheet, col, row),
     number: finiteNumber,
     scalar: (expr) => scalarExpr(expr, ctx),
+    col: ctx.col,
+    row: ctx.row,
   };
   return fn(args, host);
 }
@@ -138,14 +141,11 @@ function evalCall(name: string, args: readonly Expr[], ctx: EvalCtx): Value {
 function scalarExpr(expr: Expr, ctx: EvalCtx): Value {
   const arg = evalArg(expr, ctx);
   if (arg.kind === "value") return arg.value;
-  const hit = scalarRangeCell(arg.col0, arg.row0, arg.col1, arg.row1, ctx.col, ctx.row);
-  if (hit === null) return { kind: "error", code: "#VALUE!" };
-  return computeCell(ctx, arg.sheet, hit.col, hit.row);
+  return scalarRect(arg, ctx);
 }
 
 function evalArg(expr: Expr, ctx: EvalCtx): Arg {
-  if (expr.kind === "ref") return rangeArg(expr.cell, expr.cell, ctx);
-  if (expr.kind === "range") return rangeArg(expr.start, expr.end, ctx);
+  if (expr.kind === "ref" || expr.kind === "range" || expr.kind === "intersect") return rectArg(expr, ctx);
   return { kind: "value", value: evalExpr(expr, ctx) };
 }
 
@@ -170,21 +170,34 @@ function evalRef(cell: CellRef, ctx: EvalCtx): Value {
   return computeCell(ctx, sheet, cell.col, cell.row);
 }
 
-function evalRange(start: CellRef, end: CellRef, ctx: EvalCtx): Value {
-  const sheetA = resolveSheet(ctx, start.sheet);
-  const sheetB = resolveSheet(ctx, end.sheet);
-  if (sheetA === null || sheetB === null) return { kind: "error", code: "#REF!" };
-  if (sheetA !== sheetB) return { kind: "error", code: "#VALUE!" };
-  const c1 = Math.min(start.col, end.col);
-  const c2 = Math.max(start.col, end.col);
-  const r1 = Math.min(start.row, end.row);
-  const r2 = Math.max(start.row, end.row);
-  const hit = scalarRangeCell(c1, r1, c2, r2, ctx.col, ctx.row);
-  if (hit === null) return { kind: "error", code: "#VALUE!" };
-  return computeCell(ctx, sheetA, hit.col, hit.row);
+function intersectArg(left: Expr, right: Expr, ctx: EvalCtx): Arg {
+  const a = rectArg(left, ctx);
+  if (a.kind === "value") return a;
+  const b = rectArg(right, ctx);
+  if (b.kind === "value") return b;
+  if (a.sheet !== b.sheet) return { kind: "value", value: { kind: "error", code: "#VALUE!" } };
+  const col0 = Math.max(a.col0, b.col0);
+  const row0 = Math.max(a.row0, b.row0);
+  const col1 = Math.min(a.col1, b.col1);
+  const row1 = Math.min(a.row1, b.row1);
+  if (col0 > col1 || row0 > row1) return { kind: "value", value: { kind: "error", code: "#VALUE!" } };
+  return { kind: "range", sheet: a.sheet, col0, row0, col1, row1 };
 }
 
-function scalarRangeCell(
+function rectArg(expr: Expr, ctx: EvalCtx): Arg {
+  if (expr.kind === "ref") return rangeArg(expr.cell, expr.cell, ctx);
+  if (expr.kind === "range") return rangeArg(expr.start, expr.end, ctx);
+  if (expr.kind === "intersect") return intersectArg(expr.left, expr.right, ctx);
+  return { kind: "value", value: { kind: "error", code: "#VALUE!" } };
+}
+
+function scalarRect(rect: Extract<Arg, { kind: "range" }>, ctx: EvalCtx): Value {
+  const hit = scalarRangeCell(rect.col0, rect.row0, rect.col1, rect.row1, ctx.col, ctx.row);
+  if (hit === null) return { kind: "error", code: "#VALUE!" };
+  return computeCell(ctx, rect.sheet, hit.col, hit.row);
+}
+
+export function scalarRangeCell(
   c1: number,
   r1: number,
   c2: number,

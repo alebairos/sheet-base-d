@@ -22,6 +22,8 @@ export type FnHost = {
   cell(sheet: string, col: number, row: number): Value;
   number(n: number): Value;
   scalar(expr: Expr): Value;
+  col: number;
+  row: number;
 };
 
 export type Fn = (args: readonly Expr[], host: FnHost) => Value;

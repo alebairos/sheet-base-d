@@ -251,6 +251,54 @@ test("INDEX uses #REF! past the range, #NUM! for a negative index or area, and #
   assert.deepEqual(out.D11, { error: "#VALUE!" });
 });
 
+test("INDEX intersects one row with the formula column", () => {
+  const out = compute({
+    A1: 11,
+    B1: 12,
+    C1: 13,
+    A2: 21,
+    B2: 22,
+    C2: 23,
+    A3: 31,
+    B3: 32,
+    C3: 33,
+    B5: "=INDEX(A1:C3,2)",
+    D5: "=INDEX(A1:C3,2)",
+    E1: "=INDEX(A1:C3)",
+  }).Sheet1;
+  assert.equal(out.B5, 22);
+  assert.deepEqual(out.D5, { error: "#VALUE!" });
+  assert.deepEqual(out.E1, { error: "#VALUE!" });
+});
+
+test("INDEX intersects one column with the formula row", () => {
+  const out = compute({
+    A1: 11,
+    A2: 21,
+    A3: 31,
+    B2: "=INDEX(A1:A3,0)",
+    B4: "=INDEX(A1:A3,0)",
+    C1: 41,
+    C3: 43,
+    C2: "=INDEX(C1:C3,0)",
+  }).Sheet1;
+  assert.equal(out.B2, 21);
+  assert.deepEqual(out.B4, { error: "#VALUE!" });
+  assert.deepEqual(out.C2, { error: "#VALUE!" });
+});
+
+test("INDEX row 0 on a row intersects the formula column", () => {
+  const out = compute({
+    A1: 11,
+    B1: 12,
+    C1: 13,
+    B3: "=INDEX(A1:C1,0)",
+    D3: "=INDEX(A1:C1,0)",
+  }).Sheet1;
+  assert.equal(out.B3, 12);
+  assert.deepEqual(out.D3, { error: "#VALUE!" });
+});
+
 test("INDEX truncates indexes and treats zero as the whole axis", () => {
   const out = compute({
     A1: 11,
@@ -269,7 +317,7 @@ test("INDEX truncates indexes and treats zero as the whole axis", () => {
     D7: "=INDEX(E1,1)",
   }).Sheet1;
   assert.equal(out.D1, 12);
-  assert.deepEqual(out.D2, { error: "#VALUE!" });
+  assert.equal(out.D2, 21);
   assert.equal(out.D3, 21);
   assert.equal(out.D4, 11);
   assert.equal(out.D5, 21);

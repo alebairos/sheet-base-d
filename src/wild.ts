@@ -21,8 +21,10 @@ export function criteriaText(value: Value): string | null {
 
 export function criteriaMatch(pattern: string, text: string): boolean {
   if (!isCriteriaRegex(pattern)) return text.toUpperCase() === pattern.toUpperCase();
+  const caseOff = pattern.includes("(?-i)");
+  const body = pattern.replaceAll("(?-i)", "").replaceAll("(?i)", "");
   try {
-    return new RegExp(`^(?:${pattern.replaceAll("(?i)", "")})$`, "iu").test(text);
+    return new RegExp(`^(?:${body})$`, caseOff ? "u" : "iu").test(text);
   } catch {
     return text.toUpperCase() === pattern.toUpperCase();
   }

@@ -364,6 +364,18 @@ test("MEDIAN picks the middle or the mean of the two middle numbers", () => {
   assert.deepEqual(out.B3, { error: "#VALUE!" });
 });
 
+test("COUNTIF (?-i) matches one case and (?i) still matches all cases", () => {
+  const out = compute({
+    A1: "Apple",
+    A2: "apple",
+    A3: "APPLE",
+    B1: '=COUNTIF(A1:A3,"(?-i)apple")',
+    B2: '=COUNTIF(A1:A3,"(?i)apple")',
+  });
+  assert.equal(out.B1, 1);
+  assert.equal(out.B2, 3);
+});
+
 test("COUNTIF, SUMIF, and AVERAGEIF accept an inline (?i) flag", () => {
   const out = compute({
     A1: "Apple",

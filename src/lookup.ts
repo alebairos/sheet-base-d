@@ -1,4 +1,4 @@
-import { asNumber } from "./eval.js";
+import { asNumber, scalarRangeCell } from "./eval.js";
 import type { Fn, FnHost } from "./fn.js";
 import type { Expr } from "./parse.js";
 import type { ErrorCode, Value } from "./value.js";
@@ -117,8 +117,9 @@ function pick(grid: Grid, row: number, col: number, host: FnHost): Value {
   let c1 = grid.c1;
   if (row !== 0) r0 = r1 = grid.r0 + row - 1;
   if (col !== 0) c0 = c1 = grid.c0 + col - 1;
-  if (r0 !== r1 || c0 !== c1) return err("#VALUE!");
-  return host.cell(grid.sheet, c0, r0);
+  const hit = scalarRangeCell(c0, r0, c1, r1, host.col, host.row);
+  if (hit === null) return err("#VALUE!");
+  return host.cell(grid.sheet, hit.col, hit.row);
 }
 
 function findIndex(cells: readonly Value[], key: Value, mode: Mode): number | Err | null {

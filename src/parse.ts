@@ -31,7 +31,8 @@ export type Expr =
   | { kind: "binary"; op: BinOp; left: Expr; right: Expr }
   | { kind: "call"; name: string; args: Expr[] }
   | { kind: "ref"; cell: CellRef }
-  | { kind: "range"; start: CellRef; end: CellRef };
+  | { kind: "range"; start: CellRef; end: CellRef }
+  | { kind: "intersect"; left: Expr; right: Expr };
 
 type Tok =
   | { k: "num"; n: number }
@@ -431,7 +432,33 @@ class Parser {
     this.bump();
     const end = this.parseRangeEnd();
     if (start.sheet !== null && end.sheet === null) end.sheet = start.sheet;
-    return { kind: "range", start, end };
+    return this.intersectMore({ kind: "range", start, end });
+  }
+
+  private intersectMore(left: Expr): Expr {
+    if (this.tok.k !== "!") return left;
+    this.bump();
+    return this.intersectMore({ kind: "intersect", left, right: this.parseIntersectSide() });
+  }
+
+  private parseIntersectSide(): Expr {
+    const tok = this.tok;
+    if (tok.k === "qsheet") {
+      this.bump();
+      return this.parseAnchoredRef(tok.name);
+    }
+    if (tok.k === "id") {
+      const name = tok.name;
+      this.bump();
+      if (this.tok.k === "!") return this.parseAnchoredRef(name);
+      this.fail();
+    }
+    if (tok.k === "ref") {
+      const cell = this.cellFrom(tok, null);
+      this.bump();
+      return this.maybeRange(cell);
+    }
+    this.fail();
   }
 
   private parseRangeEnd(): CellRef {
@@ -442,12 +469,25 @@ class Parser {
       return this.takeRef(tok.name);
     }
     if (tok.k === "id") {
-      const name = tok.name;
+      const cell = this.bareCell(tok.name);
       this.bump();
+      if (cell !== null && this.tok.k === "!") return cell;
       this.expect("!");
-      return this.takeRef(name);
+      return this.takeRef(tok.name);
     }
     return this.takeRef(null);
+  }
+
+  private bareCell(name: string): CellRef | null {
+    const match = /^([A-Za-z]{1,3})(\d+)$/.exec(name);
+    if (match === null) return null;
+    const letters = match[1];
+    const digits = match[2];
+    if (letters === undefined || digits === undefined) return null;
+    const col = columnIndex(letters);
+    const row = Number(digits);
+    if (col === null || !Number.isSafeInteger(row) || row < 1) return null;
+    return { sheet: null, col, row: row - 1, absCol: false, absRow: false };
   }
 
   private takeRef(sheet: string | null): CellRef {

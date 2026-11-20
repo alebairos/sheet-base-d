@@ -370,12 +370,7 @@ class Parser {
       this.bump();
       return { kind: "text", t: tok.s };
     }
-    if (tok.k === "(") {
-      this.bump();
-      const expr = this.parseComp();
-      this.expect(")");
-      return expr;
-    }
+    if (tok.k === "(") return this.unionMore(this.intersectMore(this.parseParen()));
     if (tok.k === "qsheet") {
       this.bump();
       return this.unionMore(this.parseAnchoredRef(tok.name));
@@ -395,6 +390,13 @@ class Parser {
       return this.unionMore(this.maybeRange(cell));
     }
     this.fail();
+  }
+
+  private parseParen(): Expr {
+    this.expect("(");
+    const expr = this.parseComp();
+    this.expect(")");
+    return expr;
   }
 
   private parseCall(name: string): Expr {
@@ -467,6 +469,7 @@ class Parser {
   }
 
   private parseIntersectSide(): Expr {
+    if (this.tok.k === "(") return this.intersectMore(this.parseParen());
     const tok = this.tok;
     if (tok.k === "qsheet") {
       this.bump();

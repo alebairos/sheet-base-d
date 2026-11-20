@@ -849,6 +849,48 @@ const cases = [
     expect: { error: "#VALUE!" },
     note: "Calc rejects a comma that is not a thousands group",
   },
+  {
+    id: "paren-union-both",
+    pri: "P1",
+    book: {
+      sheets: { Sheet1: { A1: 1, A2: 2, A3: 3, B1: "=SUM((A1:A2)~(A2:A3))" } },
+    },
+    cell: "Sheet1!B1",
+    expect: 8,
+    note: "Calc allows parentheses around each side of ~",
+  },
+  {
+    id: "paren-union-left",
+    pri: "P1",
+    book: {
+      sheets: { Sheet1: { A1: 1, A2: 2, A3: 3, B1: "=SUM((A1:A2)~A2:A3)" } },
+    },
+    cell: "Sheet1!B1",
+    expect: 8,
+    note: "Calc allows parentheses on the left of ~",
+  },
+  {
+    id: "paren-union-right",
+    pri: "P1",
+    book: {
+      sheets: { Sheet1: { A1: 1, A2: 2, A3: 3, B1: "=SUM(A1:A2~(A2:A3))" } },
+    },
+    cell: "Sheet1!B1",
+    expect: 8,
+    note: "Calc allows parentheses on the right of ~",
+  },
+  {
+    id: "paren-intersect",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A1: 1, B1: 10, C1: 30, D1: "=SUM((A1:C1)!(B1:B1))" },
+      },
+    },
+    cell: "Sheet1!D1",
+    expect: 10,
+    note: "Calc allows parentheses around each side of !",
+  },
 ];
 
 function runCase(c) {

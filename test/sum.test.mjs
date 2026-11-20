@@ -103,6 +103,47 @@ test("AVERAGE averages a tilde union", () => {
   assert.equal(out.B1, 5);
 });
 
+test("SUM adds a tilde union with parentheses around each range", () => {
+  const out = compute({ A1: 1, A2: 2, A3: 3, B1: "=SUM((A1:A2)~(A2:A3))" });
+  assert.equal(out.B1, 8);
+});
+
+test("SUM adds a tilde union with parentheses on the left range", () => {
+  const out = compute({ A1: 1, A2: 2, A3: 3, B1: "=SUM((A1:A2)~A2:A3)" });
+  assert.equal(out.B1, 8);
+});
+
+test("SUM adds a tilde union with parentheses on the right range", () => {
+  const out = compute({ A1: 1, A2: 2, A3: 3, B1: "=SUM(A1:A2~(A2:A3))" });
+  assert.equal(out.B1, 8);
+});
+
+test("SUM adds a tilde union wrapped in one pair of parentheses", () => {
+  const out = compute({ A1: 1, A2: 2, A3: 3, B1: "=SUM((A1:A2~A2:A3))" });
+  assert.equal(out.B1, 8);
+});
+
+test("SUM adds a bang intersection with parentheses around each range", () => {
+  const out = compute({ A1: 1, B1: 10, C1: 30, D1: "=SUM((A1:C1)!(B1:B1))" });
+  assert.equal(out.D1, 10);
+});
+
+test("intersection binds tighter than union when parentheses mix the operators", () => {
+  const out = compute({
+    A1: 4,
+    A2: 6,
+    B1: "=SUM((A1:A1)~(A2:A2)!(A2:A2))",
+    B2: "=SUM((A1:A1)!(A1:A1)~(A2:A2))",
+  });
+  assert.equal(out.B1, 10);
+  assert.equal(out.B2, 10);
+});
+
+test("a space between parenthesized ranges stays #VALUE!", () => {
+  const out = compute({ A1: 1, B1: 10, C1: 30, D1: "=SUM((A1:C1) (B1:B1))" });
+  assert.deepEqual(out.D1, { error: "#VALUE!" });
+});
+
 test("SUM adds the same cell on every sheet in a span", () => {
   const sheets = computeBook({
     sheets: {

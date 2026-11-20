@@ -195,6 +195,26 @@ test("MATCH equates TRUE with 1 and numeric text with numbers only from the text
   assert.equal(out.H1, 1);
 });
 
+test("MATCH of a blank cell matches empty text and skips numbers and blank cells", () => {
+  const out = compute({
+    A1: 1,
+    A2: "",
+    A3: "x",
+    B1: "=MATCH(C1,A1:A3,0)",
+    D1: 0,
+    D2: "",
+    E1: "=MATCH(C1,D1:D2,0)",
+    F1: "=MATCH(C1,G1,0)",
+    H1: "=MATCH(,D1,0)",
+    I1: '=MATCH("",D1:D2,0)',
+  }).Sheet1;
+  assert.equal(out.B1, 2);
+  assert.equal(out.E1, 2);
+  assert.deepEqual(out.F1, { error: "#N/A" });
+  assert.equal(out.H1, 1);
+  assert.equal(out.I1, 2);
+});
+
 test("MATCH approximate on an unsorted column finds a later equal and otherwise stops at the first larger value", () => {
   const out = compute({
     A1: 5,

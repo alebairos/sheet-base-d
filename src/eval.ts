@@ -143,8 +143,12 @@ function scalarExpr(expr: Expr, ctx: EvalCtx): Value {
   const arg = evalArg(expr, ctx);
   if (arg.kind === "value") return arg.value;
   const area = oneArea(arg);
-  if ("code" in area) return area;
-  return scalarRect(area, ctx);
+  if (!("code" in area)) return scalarRect(area, ctx);
+  if (expr.kind === "range") {
+    const own = arg.areas.find((item) => item.sheet === ctx.sheet);
+    if (own !== undefined) return scalarRect(own, ctx);
+  }
+  return area;
 }
 
 function evalArg(expr: Expr, ctx: EvalCtx): Arg {

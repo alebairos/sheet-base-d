@@ -81,7 +81,7 @@ function match(args: readonly Expr[], host: FnHost): Value {
   const keyExpr = args[0];
   const rangeExpr = args[1];
   if (keyExpr === undefined || rangeExpr === undefined) return err("#VALUE!");
-  const key = host.scalar(keyExpr);
+  let key = host.scalar(keyExpr);
   if (key.kind === "error") return key;
   const grid = gridOf(rangeExpr, host, "#VALUE!");
   if ("code" in grid) return grid;
@@ -89,6 +89,7 @@ function match(args: readonly Expr[], host: FnHost): Value {
   if ("code" in cells) return cells;
   const mode = args.length === 2 ? "asc" : modeOf(scalarAt(args[2], host));
   if (typeof mode !== "string") return mode;
+  if (mode === "exact" && key.kind === "blank" && keyExpr.kind !== "blank") key = { kind: "text", t: "" };
   const hit = findIndex(cells, key, mode);
   if (hit === null) return err("#N/A");
   if (typeof hit !== "number") return hit;

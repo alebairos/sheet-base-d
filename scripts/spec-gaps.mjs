@@ -609,6 +609,27 @@ const cases = [
     expect: 1,
     note: "Calc descending MATCH keeps the first in-order candidate and ignores a later equal after a break",
   },
+  {
+    id: "match-blank",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: 1, A2: "", A3: "x", B1: "=MATCH(C1,A1:A3,0)" } } },
+    cell: "Sheet1!B1",
+    expect: 2,
+    note: "Calc exact MATCH of a blank key matches an empty string",
+  },
+  {
+    id: "scalar-3d",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A1: 3, B1: "=Sheet1!A1:Sheet2!A1" },
+        Sheet2: { A1: 4 },
+      },
+    },
+    cell: "Sheet1!B1",
+    expect: 3,
+    note: "Calc scalar use of a one-cell sheet span returns that cell on the formula sheet",
+  },
 ];
 
 function runCase(c) {

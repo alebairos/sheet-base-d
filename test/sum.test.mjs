@@ -120,6 +120,31 @@ test("SUM repeats the rectangle on each sheet of a span", () => {
   assert.equal(sheets.Sheet1.A1, 10);
 });
 
+test("a sheet span used as a scalar is the formula sheet rectangle", () => {
+  const sheets = computeBook({
+    sheets: {
+      Sheet1: {
+        A1: 3,
+        B1: 8,
+        C1: "=Sheet1!A1:Sheet2!A1",
+        D1: "=Sheet1!A1:Sheet2!B1",
+        B2: "=Sheet1!A1:Sheet2!B1",
+        E1: "=Sheet1!A1:Sheet2!B2",
+      },
+      Mid: { A1: 9, C1: "=Sheet1!A1:Sheet2!A1" },
+      Sheet2: { A1: 4, C1: "=Sheet1!A1:Sheet2!A1" },
+      Out: { A1: "=Sheet1!A1:Sheet2!A1" },
+    },
+  });
+  assert.equal(sheets.Sheet1.C1, 3);
+  assert.equal(sheets.Mid.C1, 9);
+  assert.equal(sheets.Sheet2.C1, 4);
+  assert.deepEqual(sheets.Out.A1, { error: "#VALUE!" });
+  assert.deepEqual(sheets.Sheet1.D1, { error: "#VALUE!" });
+  assert.equal(sheets.Sheet1.B2, 8);
+  assert.deepEqual(sheets.Sheet1.E1, { error: "#VALUE!" });
+});
+
 test("SUM of a sheet-qualified range stays on that sheet", () => {
   const sheets = computeBook({
     sheets: {

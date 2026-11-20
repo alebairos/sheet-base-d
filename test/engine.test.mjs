@@ -479,7 +479,7 @@ test("ranges used as values follow Calc", () => {
       Row: { A1: 10, B1: 20, C1: 30, D1: { error: "#VALUE!" }, B2: 20 },
       RowSelf: { A1: 10, B1: { error: "#CIRC!" }, C1: 30 },
       Area: { A1: { error: "#VALUE!" }, B2: 0 },
-      Cross: { A1: 5, B1: { error: "#REF!" }, C1: { error: "#VALUE!" } },
+      Cross: { A1: 5, B1: { error: "#REF!" }, C1: 5 },
       Sheet2: { A1: 5 },
     },
   });

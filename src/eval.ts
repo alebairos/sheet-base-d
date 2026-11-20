@@ -175,21 +175,21 @@ function evalArg(expr: Expr, ctx: EvalCtx): Arg {
 function rangeArg(start: CellRef, end: CellRef, ctx: EvalCtx): Arg {
   const sheetA = resolveSheet(ctx, start.sheet);
   const sheetB = resolveSheet(ctx, end.sheet);
-  if (sheetA === null && sheetB === null) return { kind: "value", value: unresolvedSheet() };
-  if (sheetA === null || sheetB === null) return { kind: "value", value: { kind: "error", code: "#VALUE!" } };
-  const names = Object.keys(ctx.workbook.sheets);
-  const i = names.indexOf(sheetA);
-  const j = names.indexOf(sheetB);
+  if (sheetA === null || (sheetB === null && start.sheet === null)) {
+    return { kind: "value", value: unresolvedSheet() };
+  }
   const col0 = Math.min(start.col, end.col);
   const row0 = Math.min(start.row, end.row);
   const col1 = Math.max(start.col, end.col);
   const row1 = Math.max(start.row, end.row);
+  const box = { col0, row0, col1, row1 };
+  if (sheetB === null) return { kind: "areas", areas: [{ sheet: sheetA, ...box }] };
+  const names = Object.keys(ctx.workbook.sheets);
+  const i = names.indexOf(sheetA);
+  const j = names.indexOf(sheetB);
   const areas: Area[] = names.slice(Math.min(i, j), Math.max(i, j) + 1).map((sheet) => ({
     sheet,
-    col0,
-    row0,
-    col1,
-    row1,
+    ...box,
   }));
   return { kind: "areas", areas };
 }

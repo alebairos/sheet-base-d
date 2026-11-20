@@ -2314,6 +2314,204 @@ const cases = [
     expect: 1,
     note: "canary: COUNTA of a missing-sheet range stays 1",
   },
+  {
+    id: "sum-open-end-rect",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=SUM(Sheet2!A1:Missing!B2)" },
+        Sheet2: { A1: 5, B1: 1, A2: 2, B2: 3 },
+        Sheet3: { A1: 70 },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: 11,
+    note: "Calc drops a missing end sheet and sums the start sheet rectangle only",
+  },
+  {
+    id: "sum-open-end-reverse",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=SUM(Sheet2!B2:Missing!A1)" },
+        Sheet2: { A1: 5, B1: 1, A2: 2, B2: 3 },
+        Sheet3: { A1: 70 },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: 11,
+    note: "Calc keeps the bounding box on the start sheet when the end sheet is missing",
+  },
+  {
+    id: "sum-open-end-first",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { E1: "=SUM(Sheet1!E2:Missing!E2)", E2: 9 },
+        Sheet2: { E2: 100 },
+        Sheet3: { E2: 7 },
+      },
+    },
+    cell: "Sheet1!E1",
+    expect: 9,
+    note: "Calc does not walk sheets after the start when the end sheet is missing",
+  },
+  {
+    id: "sum-open-start-missing",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=SUM(Missing!A1:Sheet2!A1)" },
+        Sheet2: { A1: 5 },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: { error: "#NAME?" },
+    note: "Calc leaves a range with a missing start sheet as #NAME?",
+  },
+  {
+    id: "sum-open-bare-start",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: 5, B1: 1, A2: 2, B2: 3, C1: "=SUM(A1:Missing!B2)" },
+      },
+    },
+    cell: "Sheet1!C1",
+    expect: { error: "#NAME?" },
+    note: "Calc does not treat a bare start and a missing end sheet as the current sheet",
+  },
+  {
+    id: "sum-open-end-quoted",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=SUM('Sheet2'!A1:'Gone'!A1)" },
+        Sheet2: { A1: 5 },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: 5,
+    note: "Calc strips a quoted missing end sheet and keeps the start cell",
+  },
+  {
+    id: "scalar-open-end-cell",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: 99, C1: "=Sheet2!A1:Missing!A1" },
+        Sheet2: { A1: 5 },
+        Sheet3: { A1: 70 },
+      },
+    },
+    cell: "Sheet1!C1",
+    expect: 5,
+    note: "Calc scalar of a one-cell range with a missing end sheet is that start-sheet cell",
+  },
+  {
+    id: "scalar-open-end-col",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { B2: "=Sheet2!A1:Missing!A3" },
+        Sheet2: { A1: 5, A2: 2, A3: 8 },
+      },
+    },
+    cell: "Sheet1!B2",
+    expect: 2,
+    note: "Calc intersects a missing-end column range with the formula row on the start sheet",
+  },
+  {
+    id: "scalar-open-end-row",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { C5: "=Sheet2!A1:Missing!C1" },
+        Sheet2: { A1: 5, B1: 1, C1: 4 },
+      },
+    },
+    cell: "Sheet1!C5",
+    expect: 4,
+    note: "Calc intersects a missing-end row range with the formula column on the start sheet",
+  },
+  {
+    id: "count-open-end",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=COUNT(Sheet2!A1:Missing!B2)" },
+        Sheet2: { A1: 5, B1: 1, A2: 2, B2: 3 },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: 4,
+    note: "Calc COUNT sees the start sheet rectangle when the end sheet is missing",
+  },
+  {
+    id: "average-open-end",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=AVERAGE(Sheet2!A1:Missing!B2)" },
+        Sheet2: { A1: 5, B1: 1, A2: 2, B2: 3 },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: 2.75,
+    note: "Calc AVERAGE of a missing-end rectangle is the mean of the start sheet cells",
+  },
+  {
+    id: "sum-open-end-error",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=SUM(Sheet2!F1:Missing!F1)" },
+        Sheet2: { F1: "=1/0" },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: { error: "#DIV/0!" },
+    note: "Calc still propagates an error cell after dropping a missing end sheet",
+  },
+  {
+    id: "sum-open-end-text",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=SUM(Sheet2!D1:Missing!D1)" },
+        Sheet2: { D1: "x" },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: 0,
+    note: "Calc SUM skips text on the start sheet after a missing end sheet is dropped",
+  },
+  {
+    id: "vlookup-open-end",
+    pri: "P0",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=VLOOKUP(2,Sheet2!A1:Missing!B3,2,FALSE)" },
+        Sheet2: { A1: 5, B1: 1, A2: 2, B2: 3, A3: 8, B3: 6 },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: 3,
+    note: "Calc VLOOKUP uses the start sheet table when the end sheet is missing",
+  },
+  {
+    id: "scalar-open-end-outside",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { B7: "=Sheet2!A1:Missing!A3" },
+        Sheet2: { A1: 5, A2: 2, A3: 8 },
+      },
+    },
+    cell: "Sheet1!B7",
+    expect: { error: "#VALUE!" },
+    note: "canary: a missing-end column range still #VALUE! when the formula row is outside it",
+  },
 ];
 
 function runCase(c) {

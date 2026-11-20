@@ -467,6 +467,8 @@ class Parser {
       return this.unionMore(this.intersectMore(expr));
     }
     if (tok.k === "str") {
+      // "a"# and "a" # are syntax errors.
+      if (this.peekNonSpace() === "#") this.fail();
       this.bump();
       return { kind: "text", t: tok.s };
     }

@@ -6103,6 +6103,38 @@ const cases = [
     expect: { error: "#VALUE!" },
     note: "a hash error token after a percent is a syntax error, not #REF!",
   },
+  {
+    id: "string-hash",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '="a"#' } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#VALUE!" },
+    note: "a hash glued to a string is a syntax error, exported as #VALUE!",
+  },
+  {
+    id: "string-hash-space",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '="a" #' } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#VALUE!" },
+    note: "a space before a hash on a string is a syntax error, exported as #VALUE!",
+  },
+  {
+    id: "string-hash-digit",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '="a"#2' } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#VALUE!" },
+    note: "a hash and a digit glued to a string stay a syntax error",
+  },
+  {
+    id: "string-hash-space-digit",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: '="a" #2' } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#VALUE!" },
+    note: "a space, a hash, and a digit after a string stay a syntax error",
+  },
 ];
 
 function runCase(c) {

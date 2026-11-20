@@ -391,19 +391,28 @@ function divide(left: Value, right: Value): Value {
   return finiteNumber(l.n / r.n);
 }
 
+// Smallest positive normal double. Calc rejects a power below this, including a flush to 0.
+const MIN_NORMAL = Number.MIN_VALUE * 2 ** 52;
+
 export function raise(base: number, exp: number): number {
   if (exp === 0) return 1;
   if (base === 0) return exp > 0 ? 0 : Number.NaN;
+  let result: number;
   if (base < 0) {
     const rounded = Math.round(exp);
-    if (approxEqual(exp, rounded)) return base ** rounded;
-    const root = unitOddRoot(exp);
-    if (root === null) return Number.NaN;
-    const mag = Math.abs(base) ** (1 / root.n);
-    const signed = -mag;
-    return root.recip ? 1 / signed : signed;
+    if (approxEqual(exp, rounded)) result = base ** rounded;
+    else {
+      const root = unitOddRoot(exp);
+      if (root === null) return Number.NaN;
+      const mag = Math.abs(base) ** (1 / root.n);
+      const signed = -mag;
+      result = root.recip ? 1 / signed : signed;
+    }
+  } else {
+    result = base ** exp;
   }
-  return base ** exp;
+  if (Math.abs(result) < MIN_NORMAL) return Number.NaN;
+  return result;
 }
 
 function unitOddRoot(exp: number): { n: number; recip: boolean } | null {

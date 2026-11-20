@@ -118,6 +118,7 @@ class Parser {
   private readNumber(): void {
     const start = this.i;
     const leadDot = this.ch() === ".";
+    let sawDot = leadDot;
     if (leadDot) {
       this.i++;
       if (!isDigit(this.ch())) this.fail();
@@ -126,10 +127,12 @@ class Parser {
       while (isDigit(this.ch())) this.i++;
       if (this.ch() === ".") {
         this.i++;
+        sawDot = true;
         while (isDigit(this.ch())) this.i++;
       }
     }
     let signedExp = false;
+    let sawExp = false;
     if (this.ch() === "e" || this.ch() === "E") {
       let j = this.i + 1;
       const sign = this.src[j] ?? "";
@@ -137,6 +140,7 @@ class Parser {
       if (signed) j++;
       if (isDigit(this.src[j] ?? "")) {
         signedExp = signed;
+        sawExp = true;
         this.i = j;
         while (isDigit(this.ch())) this.i++;
       }
@@ -147,7 +151,29 @@ class Parser {
       this.tok = { k: "id", name: this.src.slice(start, this.i) };
       return;
     }
-    const text = this.src.slice(start, this.i);
+    // 1e2.3 is a name. 1e2.3.4 is that name beside .4. A decimal before the exponent, as in 1.2e3.4, does not glue.
+    if (sawExp && !sawDot && this.ch() === "." && isExpDotSuffix(this.src[this.i + 1] ?? "")) {
+      this.i++;
+      while (isExpDotSuffix(this.ch())) this.i++;
+      this.tok = { k: "id", name: this.src.slice(start, this.i) };
+      return;
+    }
+    // .5.5 and .5. and .5e2.3 are names. .5.5.5 stays the number .5 beside the name .5.5.
+    if (leadDot && this.ch() === ".") {
+      const end = dotNameTail(this.src, this.i);
+      if (end !== null) {
+        this.i = end;
+        this.tok = { k: "id", name: this.src.slice(start, this.i) };
+        return;
+      }
+    }
+    // 1e2. is 100. Number() rejects the trailing dot, so the value omits it.
+    let end = this.i;
+    if (sawExp && !sawDot && this.ch() === ".") {
+      this.i++;
+      end = this.i - 1;
+    }
+    const text = this.src.slice(start, end);
     let n = Number(text);
     // Calc rejects a literal that flushes to 0. A zero significand, such as 0E-400, stays 0.
     const expAt = text.search(/[eE]/);
@@ -448,7 +474,7 @@ class Parser {
       const upper = name.toUpperCase();
       if (upper === "TRUE" || upper === "FALSE") return { kind: "bool", b: upper === "TRUE" };
       if (/^[A-Za-z]{1,3}\d+[A-Za-z_.]/.test(name)) return { kind: "name" };
-      if (isDigit(name[0] ?? "")) return { kind: "name" };
+      if (isDigit(name[0] ?? "") || name[0] === ".") return { kind: "name" };
       throw new NameFail();
     }
     if (tok.k === "ref") {
@@ -799,6 +825,22 @@ function isLetter(c: string): boolean {
 
 function isNameChar(c: string): boolean {
   return isLetter(c) || isDigit(c) || c === "_" || c === ".";
+}
+
+function isExpDotSuffix(c: string): boolean {
+  return isNameChar(c) && c !== ".";
+}
+
+// The tail of a leading-dot name: ".5" or a final ".". A further dot or a letter keeps the split.
+function dotNameTail(src: string, i: number): number | null {
+  const n = src[i + 1] ?? "";
+  if (n === "." || isLetter(n) || n === "_") return null;
+  if (!isDigit(n)) return i + 1;
+  let j = i + 1;
+  while (isDigit(src[j] ?? "")) j++;
+  const after = src[j] ?? "";
+  if (after === "." || isLetter(after) || after === "_") return null;
+  return j;
 }
 
 export type ParsedFormula =

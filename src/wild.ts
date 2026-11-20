@@ -50,9 +50,19 @@ function compileCriteria(pattern: string): RegExp | "never" | "literal" {
   if (body === null) return "never";
   try {
     return new RegExp(`^(?:${body})$`, "u");
-  } catch {
+  } catch (err) {
+    // A one-character broken pattern stays a literal, so * matches *.
+    // A longer dangling * + ? or an unclosed group or class matches nothing.
+    if (pattern.length !== 1 && danglingPattern(err, pattern)) return "never";
     return scan.sawFlag ? "never" : "literal";
   }
+}
+
+function danglingPattern(err: unknown, pattern: string): boolean {
+  if (!(err instanceof Error)) return false;
+  const message = err.message;
+  if (message.includes("Unterminated group") || message.includes("Unterminated character class")) return true;
+  return message.includes("Nothing to repeat") && /[*+?]/.test(pattern);
 }
 
 function readSeq(scan: Scan, stop: boolean, mode: Mode): string | null {

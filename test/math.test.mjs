@@ -474,6 +474,58 @@ test("inline regex flags apply from the point they appear", () => {
   assert.equal(out.D2, 1);
 });
 
+test("a dangling quantifier matches nothing unless the pattern is one character", () => {
+  const out = compute({
+    A1: "*a",
+    A2: "xa",
+    A3: "ba",
+    A4: "**",
+    A5: "(a",
+    A6: "(",
+    A7: "+",
+    A8: "+a",
+    A9: "aa",
+    A10: "[a",
+    A11: "[",
+    A12: "a**",
+    B1: 3,
+    C1: '=COUNTIF(A1,"*a")',
+    C2: '=COUNTIF(A2,"*a")',
+    C3: '=COUNTIF(A1:A3,"*a")',
+    C4: '=COUNTIF(A4,"**")',
+    C5: '=COUNTIF(A5,"(a")',
+    C6: '=COUNTIF(A6,"(")',
+    C7: '=COUNTIF(A7,"+")',
+    C8: '=COUNTIF(A8,"+a")',
+    C9: '=COUNTIF(A9,"a*")',
+    C10: '=COUNTIF(A10,"[a")',
+    C11: '=COUNTIF(A11,"[")',
+    C12: '=COUNTIF(A12,"a**")',
+    C13: '=COUNTIF(A9,"a**")',
+    C14: '=COUNTIF(A1,"*")',
+    C15: '=COUNTIF(A1,"(?i)*a")',
+    C16: '=MATCH("*a",A1,0)',
+    C17: '=SUMIF(A1,"*a",B1)',
+  });
+  assert.equal(out.C1, 0);
+  assert.equal(out.C2, 0);
+  assert.equal(out.C3, 0);
+  assert.equal(out.C4, 0);
+  assert.equal(out.C5, 0);
+  assert.equal(out.C6, 1);
+  assert.equal(out.C7, 1);
+  assert.equal(out.C8, 0);
+  assert.equal(out.C9, 1);
+  assert.equal(out.C10, 0);
+  assert.equal(out.C11, 1);
+  assert.equal(out.C12, 0);
+  assert.equal(out.C13, 0);
+  assert.equal(out.C14, 0);
+  assert.equal(out.C15, 0);
+  assert.deepEqual(out.C16, { error: "#N/A" });
+  assert.equal(out.C17, 0);
+});
+
 test("SUMIF, COUNTIF, and AVERAGEIF accept a union criteria range", () => {
   const out = compute({
     A1: 1,

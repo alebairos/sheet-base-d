@@ -191,17 +191,24 @@ function evalRef(cell: CellRef, ctx: EvalCtx): Value {
 }
 
 function intersectArg(left: Expr, right: Expr, ctx: EvalCtx): Arg {
-  const a = oneArea(rectArg(left, ctx));
-  if ("code" in a) return { kind: "value", value: a };
-  const b = oneArea(rectArg(right, ctx));
-  if ("code" in b) return { kind: "value", value: b };
-  if (a.sheet !== b.sheet) return { kind: "value", value: { kind: "error", code: "#VALUE!" } };
-  const col0 = Math.max(a.col0, b.col0);
-  const row0 = Math.max(a.row0, b.row0);
-  const col1 = Math.min(a.col1, b.col1);
-  const row1 = Math.min(a.row1, b.row1);
-  if (col0 > col1 || row0 > row1) return { kind: "value", value: { kind: "error", code: "#NULL!" } };
-  return { kind: "areas", areas: [{ sheet: a.sheet, col0, row0, col1, row1 }] };
+  const a = rectArg(left, ctx);
+  if (a.kind === "value") return a;
+  const b = rectArg(right, ctx);
+  if (b.kind === "value") return b;
+  const areas: Area[] = [];
+  for (const leftArea of a.areas) {
+    for (const rightArea of b.areas) {
+      if (leftArea.sheet !== rightArea.sheet) continue;
+      const col0 = Math.max(leftArea.col0, rightArea.col0);
+      const row0 = Math.max(leftArea.row0, rightArea.row0);
+      const col1 = Math.min(leftArea.col1, rightArea.col1);
+      const row1 = Math.min(leftArea.row1, rightArea.row1);
+      if (col0 > col1 || row0 > row1) continue;
+      areas.push({ sheet: leftArea.sheet, col0, row0, col1, row1 });
+    }
+  }
+  if (areas.length === 0) return { kind: "value", value: { kind: "error", code: "#NULL!" } };
+  return { kind: "areas", areas };
 }
 
 function unionArg(left: Expr, right: Expr, ctx: EvalCtx): Arg {

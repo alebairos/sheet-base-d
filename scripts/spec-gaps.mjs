@@ -646,6 +646,84 @@ const cases = [
     expect: "İ",
     note: "Calc LOWER(İ) leaves U+0130 unchanged",
   },
+  {
+    id: "xsheet-bang",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A1: 1, B2: 5, D1: "=Sheet1!A1:C3!Sheet2!B2" },
+        Sheet2: { B2: 50 },
+      },
+    },
+    cell: "Sheet1!D1",
+    expect: { error: "#NULL!" },
+    note: "Calc cross-sheet bang intersection with no shared sheet is #NULL!",
+  },
+  {
+    id: "xsheet-space",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A1: 1, B2: 5, D1: "=A1:C3 Sheet2!B2" },
+        Sheet2: { B2: 50 },
+      },
+    },
+    cell: "Sheet1!D1",
+    expect: { error: "#NULL!" },
+    note: "Calc cross-sheet space intersection with no shared sheet is #NULL!",
+  },
+  {
+    id: "xsheet-null",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A1: "=Sheet1!A1:A2!Sheet2!C1:C2" },
+        Sheet2: { C1: 9 },
+      },
+    },
+    cell: "Sheet1!A1",
+    expect: { error: "#NULL!" },
+    note: "Calc empty cross-sheet intersection is #NULL!",
+  },
+  {
+    id: "xsheet-3d-hit",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A1: 3, B1: "=Sheet1!A1:Sheet2!A1 Sheet1!A1" },
+        Sheet2: { A1: 4 },
+      },
+    },
+    cell: "Sheet1!B1",
+    expect: 3,
+    note: "Calc sheet-span intersect cell keeps the overlapping sheet cell",
+  },
+  {
+    id: "x3d-other",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A1: 3, B1: "=Sheet1!A1:Sheet2!A1 Sheet2!A1" },
+        Sheet2: { A1: 4 },
+      },
+    },
+    cell: "Sheet1!B1",
+    expect: 4,
+    note: "Calc sheet-span intersect other-sheet cell keeps that sheet",
+  },
+  {
+    id: "x3d-sum-both",
+    pri: "P1",
+    book: {
+      sheets: {
+        Sheet1: { A1: 3, B1: "=SUM(Sheet1!A1:Sheet2!A1 Sheet1!A1:Sheet2!A1)" },
+        Sheet2: { A1: 4 },
+      },
+    },
+    cell: "Sheet1!B1",
+    expect: 7,
+    note: "Calc sheet-span intersect itself keeps both sheets",
+  },
 ];
 
 function runCase(c) {

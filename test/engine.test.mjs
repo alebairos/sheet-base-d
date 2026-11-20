@@ -484,3 +484,87 @@ test("ranges used as values follow Calc", () => {
     },
   });
 });
+
+test("a bang intersection with no shared sheet is #NULL!", () => {
+  const res = run(
+    ["-"],
+    JSON.stringify({
+      sheets: {
+        Sheet1: { A1: 1, B2: 5, D1: "=Sheet1!A1:C3!Sheet2!B2" },
+        Sheet2: { B2: 50 },
+      },
+    }),
+  );
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout).sheets.Sheet1.D1, { error: "#NULL!" });
+});
+
+test("a space intersection with no shared sheet is #NULL!", () => {
+  const res = run(
+    ["-"],
+    JSON.stringify({
+      sheets: {
+        Sheet1: { A1: 1, B2: 5, D1: "=A1:C3 Sheet2!B2" },
+        Sheet2: { B2: 50 },
+      },
+    }),
+  );
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout).sheets.Sheet1.D1, { error: "#NULL!" });
+});
+
+test("an empty cross-sheet intersection is #NULL!", () => {
+  const res = run(
+    ["-"],
+    JSON.stringify({
+      sheets: {
+        Sheet1: { A1: "=Sheet1!A1:A2!Sheet2!C1:C2" },
+        Sheet2: { C1: 9 },
+      },
+    }),
+  );
+  assert.equal(res.status, 0, res.stderr);
+  assert.deepEqual(JSON.parse(res.stdout).sheets.Sheet1.A1, { error: "#NULL!" });
+});
+
+test("a sheet span intersected with the formula sheet cell keeps that cell", () => {
+  const res = run(
+    ["-"],
+    JSON.stringify({
+      sheets: {
+        Sheet1: { A1: 3, B1: "=Sheet1!A1:Sheet2!A1 Sheet1!A1" },
+        Sheet2: { A1: 4 },
+      },
+    }),
+  );
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(JSON.parse(res.stdout).sheets.Sheet1.B1, 3);
+});
+
+test("a sheet span intersected with the other sheet cell keeps that cell", () => {
+  const res = run(
+    ["-"],
+    JSON.stringify({
+      sheets: {
+        Sheet1: { A1: 3, B1: "=Sheet1!A1:Sheet2!A1 Sheet2!A1" },
+        Sheet2: { A1: 4 },
+      },
+    }),
+  );
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(JSON.parse(res.stdout).sheets.Sheet1.B1, 4);
+});
+
+test("SUM of a sheet span intersected with itself adds every shared sheet", () => {
+  const res = run(
+    ["-"],
+    JSON.stringify({
+      sheets: {
+        Sheet1: { A1: 3, B1: "=SUM(Sheet1!A1:Sheet2!A1 Sheet1!A1:Sheet2!A1)" },
+        Sheet2: { A1: 4 },
+      },
+    }),
+  );
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(JSON.parse(res.stdout).sheets.Sheet1.B1, 7);
+});

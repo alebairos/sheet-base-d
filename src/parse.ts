@@ -232,7 +232,9 @@ class Parser {
       const letters = this.readLetters();
       if (letters === null) this.fail();
       if (this.ch() !== "$" && !isDigit(this.ch())) {
-        this.tok = { k: "col", col: colIndex(letters) };
+        const col = colIndex(letters);
+        if (this.hashBreaksRef()) this.fail();
+        this.tok = { k: "col", col };
         return;
       }
       const absRow = this.ch() === "$";
@@ -299,7 +301,7 @@ class Parser {
     return this.src.slice(start, this.i);
   }
 
-  // A1# and $1# are syntax errors. A glued #REF! stays a name, as in A1#REF!.
+  // A1#, $1#, and $A# are syntax errors. A glued #REF! stays a name, as in A1#REF!.
   private hashBreaksRef(): boolean {
     let j = this.i;
     while (isWs(this.src[j] ?? "")) j++;

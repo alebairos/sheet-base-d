@@ -175,7 +175,7 @@ function evalArg(expr: Expr, ctx: EvalCtx): Arg {
 function rangeArg(start: CellRef, end: CellRef, ctx: EvalCtx): Arg {
   const sheetA = resolveSheet(ctx, start.sheet);
   const sheetB = resolveSheet(ctx, end.sheet);
-  if (sheetA === null && sheetB === null) return { kind: "value", value: { kind: "error", code: "#REF!" } };
+  if (sheetA === null && sheetB === null) return { kind: "value", value: unresolvedSheet() };
   if (sheetA === null || sheetB === null) return { kind: "value", value: { kind: "error", code: "#VALUE!" } };
   const names = Object.keys(ctx.workbook.sheets);
   const i = names.indexOf(sheetA);
@@ -194,9 +194,13 @@ function rangeArg(start: CellRef, end: CellRef, ctx: EvalCtx): Arg {
   return { kind: "areas", areas };
 }
 
+function unresolvedSheet(): Err {
+  return { kind: "error", code: "#NAME?" };
+}
+
 function evalRef(cell: CellRef, ctx: EvalCtx): Value {
   const sheet = resolveSheet(ctx, cell.sheet);
-  if (sheet === null) return { kind: "error", code: "#NAME?" };
+  if (sheet === null) return unresolvedSheet();
   return computeCell(ctx, sheet, cell.col, cell.row);
 }
 

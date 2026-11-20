@@ -571,7 +571,7 @@ test("VLOOKUP matches text without case and reads another sheet", () => {
   assert.equal(sheets.Sheet1.C1, 10);
   assert.equal(sheets.Sheet1.C2, 20);
   assert.equal(sheets.Sheet1.C3, "cross");
-  assert.deepEqual(sheets.Sheet1.C4, { error: "#REF!" });
+  assert.deepEqual(sheets.Sheet1.C4, { error: "#NAME?" });
 });
 
 test("VLOOKUP returns a boolean as 0 or 1 and INDEX keeps the boolean", () => {

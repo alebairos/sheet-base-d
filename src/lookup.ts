@@ -141,57 +141,57 @@ function pick(grid: Grid, row: number, col: number, host: FnHost): Value {
   return host.cell(grid.sheet, hit.col, hit.row);
 }
 
-function findIndex(cells: readonly Value[], key: Value, mode: Mode): number | Err | null {
+type Spot = { i: number; value: Value };
+
+function findIndex(cells: readonly Spot[], key: Value, mode: Mode): number | Err | null {
   if (key.kind === "error") return key;
   if (mode === "exact") {
-    for (let i = 0; i < cells.length; i++) {
-      const cell = cells[i];
-      if (cell !== undefined && exactAt(cell, key)) return i;
+    for (const spot of cells) {
+      if (exactAt(spot.value, key)) return spot.i;
     }
     return null;
   }
   return scan(cells, key, mode);
 }
 
-function scan(cells: readonly Value[], key: Value, mode: "asc" | "desc"): number | null {
+function scan(cells: readonly Spot[], key: Value, mode: "asc" | "desc"): number | null {
   if (mode === "asc" && plainNum(key) !== null) return scanAscNumber(cells, key);
   let loose: number | null = null;
   let equal: number | null = null;
   let ordered = true;
-  for (let i = 0; i < cells.length; i++) {
-    const cell = cells[i];
-    if (cell === undefined) continue;
+  for (const spot of cells) {
+    const cell = spot.value;
     const rank = rel(cell, key);
     if (rank === "skip") continue;
     if (rank === "stop") break;
     if (rank === 0) {
-      if (ordered) equal = i;
+      if (ordered) equal = spot.i;
       continue;
     }
     if (!ordered) continue;
     if (mode === "asc") {
       if (rank > 0) ordered = false;
-      else loose = i;
+      else loose = spot.i;
       continue;
     }
     if (rank < 0) ordered = false;
     else {
-      loose = i;
+      loose = spot.i;
       if (equal !== null) ordered = false;
     }
   }
   return equal ?? loose;
 }
 
-function scanAscNumber(cells: readonly Value[], key: Value): number | null {
+function scanAscNumber(cells: readonly Spot[], key: Value): number | null {
   let loose: number | null = null;
   let equal: number | null = null;
   let prev: number | null = null;
   let phase: "walk" | "descended" | "seek" = "walk";
   let seekEquals = 0;
-  for (let i = 0; i < cells.length; i++) {
-    const cell = cells[i];
-    if (cell === undefined) continue;
+  for (const spot of cells) {
+    const cell = spot.value;
+    const i = spot.i;
     const rank = rel(cell, key);
     if (rank === "skip") continue;
     if (rank === "stop") break;
@@ -300,20 +300,20 @@ function near(a: number, b: number): boolean {
   return diff < scaleA * EPS || diff < scaleB * EPS;
 }
 
-function vector(grid: Grid, host: FnHost): Value[] | Err {
+function vector(grid: Grid, host: FnHost): Spot[] | Err {
   const width = grid.c1 - grid.c0 + 1;
   const height = grid.r1 - grid.r0 + 1;
   if (width !== 1 && height !== 1) return err("#VALUE!");
   if (width === 1) return column(grid, grid.c0, host);
-  const out: Value[] = [];
-  for (let col = grid.c0; col <= grid.c1; col++) out.push(host.cell(grid.sheet, col, grid.r0));
-  return out;
+  return host
+    .used({ sheet: grid.sheet, col0: grid.c0, row0: grid.r0, col1: grid.c1, row1: grid.r0 })
+    .map((hit) => ({ i: hit.col - grid.c0, value: hit.value }));
 }
 
-function column(grid: Grid, col: number, host: FnHost): Value[] {
-  const out: Value[] = [];
-  for (let row = grid.r0; row <= grid.r1; row++) out.push(host.cell(grid.sheet, col, row));
-  return out;
+function column(grid: Grid, col: number, host: FnHost): Spot[] {
+  return host
+    .used({ sheet: grid.sheet, col0: col, row0: grid.r0, col1: col, row1: grid.r1 })
+    .map((hit) => ({ i: hit.row - grid.r0, value: hit.value }));
 }
 
 function gridOf(expr: Expr, host: FnHost, missing: ErrorCode): Grid | Err {

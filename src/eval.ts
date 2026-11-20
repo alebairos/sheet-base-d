@@ -1,5 +1,5 @@
 import { parseA1 } from "./addr.js";
-import { lookupFn, oneArea, type Area, type Arg, type FnHost } from "./fn.js";
+import { lookupFn, oneArea, type Area, type Arg, type FnHost, type UsedCell } from "./fn.js";
 import { formatNumber } from "./numfmt.js";
 import { textCollation } from "./order.js";
 import { parseFormula, type BinOp, type CellRef, type Expr } from "./parse.js";
@@ -11,6 +11,7 @@ type Err = { kind: "error"; code: ErrorCode };
 type NumOrErr = Num | Err;
 
 const EPS = 1 / (16777216 * 16777216);
+const BLANK: Value = { kind: "blank" };
 
 export type EvalCtx = {
   workbook: Workbook;
@@ -75,11 +76,7 @@ export function computeCell(ctx: EvalCtx, sheet: string, col: number, row: numbe
   if (cached !== undefined) return cached;
   if (ctx.visiting.has(key)) return { kind: "error", code: "#CIRC!" };
   const input = ctx.cells.get(key);
-  if (input === undefined) {
-    const blank: Value = { kind: "blank" };
-    ctx.cache.set(key, blank);
-    return blank;
-  }
+  if (input === undefined) return BLANK;
   if (input.kind !== "formula") {
     ctx.cache.set(key, input);
     return input;
@@ -92,6 +89,24 @@ export function computeCell(ctx: EvalCtx, sheet: string, col: number, row: numbe
   ctx.visiting.delete(key);
   ctx.cache.set(key, stored);
   return stored;
+}
+
+function usedCells(ctx: EvalCtx, area: Area): UsedCell[] {
+  const table = ctx.workbook.sheets[area.sheet];
+  if (table === undefined) return [];
+  const hits: { col: number; row: number }[] = [];
+  for (const key of Object.keys(table)) {
+    const addr = parseA1(key);
+    if (addr === null) continue;
+    if (addr.col < area.col0 || addr.col > area.col1 || addr.row < area.row0 || addr.row > area.row1) continue;
+    hits.push(addr);
+  }
+  hits.sort((a, b) => a.row - b.row || a.col - b.col);
+  return hits.map((addr) => ({
+    col: addr.col,
+    row: addr.row,
+    value: computeCell(ctx, area.sheet, addr.col, addr.row),
+  }));
 }
 
 function formulaResult(value: Value): Value {
@@ -148,6 +163,7 @@ function evalCall(name: string, args: readonly Expr[], ctx: EvalCtx): Value {
   const host: FnHost = {
     arg: (expr) => evalArg(expr, ctx),
     cell: (sheet, col, row) => computeCell(ctx, sheet, col, row),
+    used: (area) => usedCells(ctx, area),
     number: finiteNumber,
     scalar: (expr) => scalarExpr(expr, ctx),
     sticky: () => ctx.sticky,

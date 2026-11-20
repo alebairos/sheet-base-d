@@ -30,9 +30,13 @@ export function oneArea(
   return area;
 }
 
+export type UsedCell = { col: number; row: number; value: Value };
+
 export type FnHost = {
   arg(expr: Expr): Arg;
   cell(sheet: string, col: number, row: number): Value;
+  // Occupied cells in row-major order. Missing cells are blank and are not listed.
+  used(area: Area): UsedCell[];
   number(n: number): Value;
   scalar(expr: Expr): Value;
   sticky(): Value | null;
@@ -114,11 +118,8 @@ function faultIn(arg: Arg, host: FnHost): Value | null {
     return null;
   }
   for (const area of arg.areas) {
-    for (let row = area.row0; row <= area.row1; row++) {
-      for (let col = area.col0; col <= area.col1; col++) {
-        const cell = host.cell(area.sheet, col, row);
-        if (cell.kind === "error") return cell;
-      }
+    for (const hit of host.used(area)) {
+      if (hit.value.kind === "error") return hit.value;
     }
   }
   return null;
@@ -139,15 +140,13 @@ function sum(args: readonly Expr[], host: FnHost): Value {
 function addArg(total: number, arg: Arg, host: FnHost): NumOrErr {
   if (arg.kind === "value") return asNum(addScalar(total, arg.value, host));
   for (const area of arg.areas) {
-    for (let row = area.row0; row <= area.row1; row++) {
-      for (let col = area.col0; col <= area.col1; col++) {
-        const part = sumCell(host.cell(area.sheet, col, row));
-        if (part === null) continue;
-        if (part.kind === "error") return part;
-        const next = asNum(host.number(total + part.n));
-        if (next.kind === "error") return next;
-        total = next.n;
-      }
+    for (const hit of host.used(area)) {
+      const part = sumCell(hit.value);
+      if (part === null) continue;
+      if (part.kind === "error") return part;
+      const next = asNum(host.number(total + part.n));
+      if (next.kind === "error") return next;
+      total = next.n;
     }
   }
   return asNum(host.number(total));
@@ -208,10 +207,8 @@ function visit(
       continue;
     }
     for (const area of arg.areas) {
-      for (let row = area.row0; row <= area.row1; row++) {
-        for (let col = area.col0; col <= area.col1; col++) {
-          if (!fn(host.cell(area.sheet, col, row), true)) return;
-        }
+      for (const hit of host.used(area)) {
+        if (!fn(hit.value, true)) return;
       }
     }
   }
@@ -570,8 +567,8 @@ function countif(args: readonly Expr[], host: FnHost): Value {
   const framed = frame(args, host, false);
   if (framed.kind === "error") return framed;
   let n = 0;
-  eachMatch(framed.areas, framed.anchor, framed.crit, host, () => {
-    n += 1;
+  eachMatch(framed.areas, framed.anchor, framed.crit, host, (_value, times) => {
+    n += times;
     return true;
   });
   return host.number(n);
@@ -608,22 +605,73 @@ function eachMatch(
   anchor: Area | null,
   crit: Crit,
   host: FnHost,
-  fn: (value: Value) => boolean,
+  fn: (value: Value, times: number) => boolean,
 ): void {
+  const blankHit = matches({ kind: "blank" }, crit);
   for (const range of areas) {
     const origin = anchor ?? range;
+    const used = host.used(range);
+    if (!blankHit) {
+      for (const hit of used) {
+        if (hit.value.kind === "error") continue;
+        if (!matches(hit.value, crit)) continue;
+        const summed = partnerCell(host, range, origin, hit.col, hit.row);
+        if (!fn(summed, 1)) return;
+      }
+      continue;
+    }
     const width = range.col1 - range.col0 + 1;
     const height = range.row1 - range.row0 + 1;
-    for (let r = 0; r < height; r++) {
-      for (let c = 0; c < width; c++) {
-        const cell = host.cell(range.sheet, range.col0 + c, range.row0 + r);
-        if (cell.kind === "error") continue;
-        if (!matches(cell, crit)) continue;
-        const summed = host.cell(origin.sheet, origin.col0 + c, origin.row0 + r);
-        if (!fn(summed)) return;
-      }
+    const critAt = new Map<string, Value>();
+    for (const hit of used) critAt.set(`${hit.col},${hit.row}`, hit.value);
+    const partner: Area = {
+      sheet: origin.sheet,
+      col0: origin.col0,
+      row0: origin.row0,
+      col1: origin.col0 + width - 1,
+      row1: origin.row0 + height - 1,
+    };
+    const stored = sameArea(partner, range) ? used : host.used(partner);
+    const events: { row: number; col: number; summed: Value }[] = [];
+    for (const hit of used) {
+      if (hit.value.kind === "error") continue;
+      if (!matches(hit.value, crit)) continue;
+      events.push({
+        row: hit.row,
+        col: hit.col,
+        summed: partnerCell(host, range, origin, hit.col, hit.row),
+      });
     }
+    let paired = 0;
+    for (const hit of stored) {
+      const col = range.col0 + (hit.col - origin.col0);
+      const row = range.row0 + (hit.row - origin.row0);
+      if (col < range.col0 || col > range.col1 || row < range.row0 || row > range.row1) continue;
+      if (critAt.has(`${col},${row}`)) continue;
+      paired += 1;
+      events.push({ row, col, summed: hit.value });
+    }
+    events.sort((a, b) => a.row - b.row || a.col - b.col);
+    for (const event of events) {
+      if (!fn(event.summed, 1)) return;
+    }
+    const extra = width * height - used.length - paired;
+    if (extra > 0 && !fn({ kind: "blank" }, extra)) return;
   }
+}
+
+function partnerCell(host: FnHost, range: Area, origin: Area, col: number, row: number): Value {
+  return host.cell(origin.sheet, origin.col0 + (col - range.col0), origin.row0 + (row - range.row0));
+}
+
+function sameArea(a: Area, b: Area): boolean {
+  return (
+    a.sheet === b.sheet &&
+    a.col0 === b.col0 &&
+    a.row0 === b.row0 &&
+    a.col1 === b.col1 &&
+    a.row1 === b.row1
+  );
 }
 
 function areasOf(expr: Expr, host: FnHost): Area[] | { kind: "error"; code: ErrorCode } {

@@ -111,14 +111,11 @@ function logicArg(expr: Expr, host: FnHost): Bits {
   if (arg.kind === "value") return logicValue(arg.value);
   const values: boolean[] = [];
   for (const area of arg.areas) {
-    for (let row = area.row0; row <= area.row1; row++) {
-      for (let col = area.col0; col <= area.col1; col++) {
-        const cell = host.cell(area.sheet, col, row);
-        if (cell.kind === "error") return cell;
-        const bit = logicCell(cell);
-        if (bit === "skip") continue;
-        values.push(bit);
-      }
+    for (const hit of host.used(area)) {
+      if (hit.value.kind === "error") return hit.value;
+      const bit = logicCell(hit.value);
+      if (bit === "skip") continue;
+      values.push(bit);
     }
   }
   return { kind: "bits", values };

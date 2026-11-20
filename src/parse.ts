@@ -41,6 +41,8 @@ type Tok =
   | { k: "str"; s: string }
   | { k: "id"; name: string }
   | { k: "ref"; absCol: boolean; absRow: boolean; col: number; row: number }
+  | { k: "col"; col: number }
+  | { k: "row"; row: number }
   | { k: "qsheet"; name: string }
   | { k: "op"; op: BinOp }
   | { k: "pct" }
@@ -165,8 +167,18 @@ class Parser {
   private readNameOrRef(): void {
     if (this.ch() === "$") {
       this.i++;
+      if (isDigit(this.ch())) {
+        const digits = this.readDigits();
+        if (digits === null) this.fail();
+        this.tok = { k: "row", row: rowIndex(digits) };
+        return;
+      }
       const letters = this.readLetters();
       if (letters === null) this.fail();
+      if (this.ch() !== "$" && !isDigit(this.ch())) {
+        this.tok = { k: "col", col: colIndex(letters) };
+        return;
+      }
       const absRow = this.ch() === "$";
       if (absRow) this.i++;
       const digits = this.readDigits();
@@ -355,6 +367,8 @@ class Parser {
       tok.k === "qsheet" ||
       tok.k === "id" ||
       tok.k === "ref" ||
+      tok.k === "col" ||
+      tok.k === "row" ||
       (tok.k === "op" && (tok.op === "+" || tok.op === "-"))
     ) {
       return;
@@ -374,8 +388,27 @@ class Parser {
   private parsePrimary(): Expr {
     const tok = this.tok;
     if (tok.k === "num") {
+      if (isRowNum(tok.n) && this.peekNonSpace() === ":") {
+        const row = tok.n - 1;
+        this.bump();
+        return this.unionMore(this.intersectMore(this.finishRowRange(null, row)));
+      }
       this.bump();
       return { kind: "number", n: tok.n };
+    }
+    if (tok.k === "row") {
+      const row = tok.row;
+      this.bump();
+      const expr =
+        this.tok.k === ":" ? this.finishRowRange(null, row) : this.rowSpan(null, row, row);
+      return this.unionMore(this.intersectMore(expr));
+    }
+    if (tok.k === "col") {
+      const col = tok.col;
+      this.bump();
+      const expr =
+        this.tok.k === ":" ? this.finishColRange(null, col) : this.colSpan(null, col, col);
+      return this.unionMore(this.intersectMore(expr));
     }
     if (tok.k === "str") {
       this.bump();
@@ -388,6 +421,11 @@ class Parser {
     }
     if (tok.k === "id") {
       const name = tok.name;
+      if (isColName(name) && this.peekNonSpace() === ":") {
+        const col = colIndex(name);
+        this.bump();
+        return this.unionMore(this.intersectMore(this.finishColRange(null, col)));
+      }
       this.bump();
       if (this.tok.k === "(") return this.parseCall(name);
       if (this.tok.k === "!") return this.unionMore(this.parseAnchoredRef(name));
@@ -444,6 +482,27 @@ class Parser {
 
   private parseAnchoredRef(sheet: string): Expr {
     this.expect("!");
+    const tok = this.tok;
+    if (tok.k === "col") {
+      this.bump();
+      const expr = this.tok.k === ":" ? this.finishColRange(sheet, tok.col) : this.colSpan(sheet, tok.col, tok.col);
+      return this.intersectMore(expr);
+    }
+    if (tok.k === "row") {
+      this.bump();
+      const expr = this.tok.k === ":" ? this.finishRowRange(sheet, tok.row) : this.rowSpan(sheet, tok.row, tok.row);
+      return this.intersectMore(expr);
+    }
+    if (tok.k === "id" && isColName(tok.name) && this.peekNonSpace() === ":") {
+      const col = colIndex(tok.name);
+      this.bump();
+      return this.intersectMore(this.finishColRange(sheet, col));
+    }
+    if (tok.k === "num" && isRowNum(tok.n) && this.peekNonSpace() === ":") {
+      const row = tok.n - 1;
+      this.bump();
+      return this.intersectMore(this.finishRowRange(sheet, row));
+    }
     if (this.tok.k !== "ref") return this.brokenName();
     const start = this.takeRef(sheet);
     return this.maybeRange(start);
@@ -514,8 +573,28 @@ class Parser {
       this.bump();
       return this.parseAnchoredRef(tok.name);
     }
+    if (tok.k === "col") {
+      this.bump();
+      const expr = this.tok.k === ":" ? this.finishColRange(null, tok.col) : this.colSpan(null, tok.col, tok.col);
+      return this.intersectMore(expr);
+    }
+    if (tok.k === "row") {
+      this.bump();
+      const expr = this.tok.k === ":" ? this.finishRowRange(null, tok.row) : this.rowSpan(null, tok.row, tok.row);
+      return this.intersectMore(expr);
+    }
+    if (tok.k === "num" && isRowNum(tok.n) && this.peekNonSpace() === ":") {
+      const row = tok.n - 1;
+      this.bump();
+      return this.intersectMore(this.finishRowRange(null, row));
+    }
     if (tok.k === "id") {
       const name = tok.name;
+      if (isColName(name) && this.peekNonSpace() === ":") {
+        const col = colIndex(name);
+        this.bump();
+        return this.intersectMore(this.finishColRange(null, col));
+      }
       this.bump();
       if (this.tok.k === "!") return this.parseAnchoredRef(name);
       throw new NameFail();
@@ -579,6 +658,62 @@ class Parser {
     return this.cellFrom(tok, sheet);
   }
 
+  private finishColRange(sheet: string | null, col: number): Expr {
+    if (this.tok.k !== ":") this.fail();
+    this.bump();
+    return this.colSpan(sheet, col, this.takeCol());
+  }
+
+  private finishRowRange(sheet: string | null, row: number): Expr {
+    if (this.tok.k !== ":") this.fail();
+    this.bump();
+    return this.rowSpan(sheet, row, this.takeRow());
+  }
+
+  private takeCol(): number {
+    const tok = this.tok;
+    if (tok.k === "col") {
+      this.bump();
+      return tok.col;
+    }
+    if (tok.k === "id" && isColName(tok.name)) {
+      const col = colIndex(tok.name);
+      this.bump();
+      return col;
+    }
+    throw new NameFail();
+  }
+
+  private takeRow(): number {
+    const tok = this.tok;
+    if (tok.k === "row") {
+      this.bump();
+      return tok.row;
+    }
+    if (tok.k === "num" && isRowNum(tok.n)) {
+      this.bump();
+      return tok.n - 1;
+    }
+    throw new NameFail();
+  }
+
+  // A whole column is every row. A whole row is every column. Callers keep using a rectangle.
+  private colSpan(sheet: string | null, col0: number, col1: number): Expr {
+    return {
+      kind: "range",
+      start: { sheet, col: col0, row: 0, absCol: false, absRow: false },
+      end: { sheet, col: col1, row: MAX_ROW - 1, absCol: false, absRow: false },
+    };
+  }
+
+  private rowSpan(sheet: string | null, row0: number, row1: number): Expr {
+    return {
+      kind: "range",
+      start: { sheet, col: 0, row: row0, absCol: false, absRow: false },
+      end: { sheet, col: MAX_COL, row: row1, absCol: false, absRow: false },
+    };
+  }
+
   private cellFrom(tok: Extract<Tok, { k: "ref" }>, sheet: string | null): CellRef {
     return {
       sheet,
@@ -599,6 +734,26 @@ class Parser {
 
 const MAX_COL = 16383;
 const MAX_ROW = 1048576;
+
+function isColName(name: string): boolean {
+  return /^[A-Za-z]{1,3}$/.test(name);
+}
+
+function isRowNum(n: number): boolean {
+  return Number.isInteger(n) && n >= 1 && n <= MAX_ROW;
+}
+
+function colIndex(letters: string): number {
+  const col = columnIndex(letters);
+  if (col === null || col > MAX_COL) throw new NameFail();
+  return col;
+}
+
+function rowIndex(digits: string): number {
+  const row = Number(digits);
+  if (!Number.isSafeInteger(row) || row < 1 || row > MAX_ROW) throw new NameFail();
+  return row - 1;
+}
 
 function cellAddr(letters: string, digits: string): { col: number; row: number } | null {
   const col = columnIndex(letters);

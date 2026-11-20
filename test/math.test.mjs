@@ -626,6 +626,106 @@ test("COUNTIF does not treat ß as ss", () => {
   assert.equal(out.B3, 1);
 });
 
+test("a regex ß full-folds to ss and a plain ß does not", () => {
+  const out = compute({
+    A1: "ss",
+    A2: "SS",
+    A3: "Ss",
+    A4: "ß",
+    A5: "ẞ",
+    A6: "SSSS",
+    A7: "SSS",
+    A8: "assb",
+    A9: "aßb",
+    A10: "AßB",
+    A11: "asssb",
+    A12: "ss+",
+    A13: "sss",
+    A14: "ßss",
+    A15: "xssy",
+    A16: "xßy",
+    A17: "ſſ",
+    A18: "sS",
+    B1: 4,
+    C1: '=COUNTIF(A1,"ß+")',
+    C2: '=COUNTIF(A2,"ß+")',
+    C3: '=COUNTIF(A3,"ß+")',
+    C4: '=COUNTIF(A18,"ß+")',
+    C5: '=COUNTIF(A4,"ß+")',
+    C6: '=COUNTIF(A5,"ß+")',
+    C7: '=COUNTIF(A6,"ß+")',
+    C8: '=COUNTIF(A7,"ß+")',
+    C9: '=COUNTIF(A4,"SS+")',
+    C10: '=COUNTIF(A1,"\\Qß\\E")',
+    C11: '=COUNTIF(A2,"\\Qß\\E")',
+    C12: '=COUNTIF(A5,"\\Qß\\E")',
+    C13: '=COUNTIF(A1,"(?-i)ß+")',
+    C14: '=COUNTIF(A4,"(?-i)ß+")',
+    C15: '=COUNTIF(A2,"(?-i)\\Qß\\E")',
+    C16: '=COUNTIF(A1,"ẞ+")',
+    C17: '=COUNTIF(A1,"[ß]+")',
+    C18: '=COUNTIF(A4,"[ß]")',
+    C19: '=COUNTIF(A8,"aß+b")',
+    C20: '=COUNTIF(A9,"aß+b")',
+    C21: '=COUNTIF(A10,"aß+b")',
+    C22: '=COUNTIF(A11,"aß+b")',
+    C23: '=COUNTIF(A12,"\\Qß+\\E")',
+    C24: '=COUNTIF(A13,"\\Qß+\\E")',
+    C25: '=COUNTIF(A6,"\\Qß\\E+")',
+    C26: '=COUNTIF(A14,"(?-i)ß(?i)ß")',
+    C27: '=COUNTIF(A6,"(?-i)ß(?i)ß")',
+    C28: '=COUNTIF(A8,"\\Qaßb\\E")',
+    C29: '=COUNTIF(A8,"(?-i)\\Qaßb\\E")',
+    C30: '=COUNTIF(A9,"(?-i)\\Qaßb\\E")',
+    C31: '=COUNTIF(A15,"xßy")',
+    C32: '=COUNTIF(A16,"xßy")',
+    C33: '=COUNTIF(A1,"ß")',
+    C34: '=COUNTIF(A17,"ß+")',
+    C35: '=COUNTIF(A4,"ſ+")',
+    C36: '=COUNTIF(A17,"\\Qß\\E")',
+    C37: '=MATCH("ß+",A2,0)',
+    C38: '=SUMIF(A1,"\\Qß\\E",B1)',
+  });
+  assert.equal(out.C1, 1);
+  assert.equal(out.C2, 1);
+  assert.equal(out.C3, 1);
+  assert.equal(out.C4, 1);
+  assert.equal(out.C5, 1);
+  assert.equal(out.C6, 1);
+  assert.equal(out.C7, 1);
+  assert.equal(out.C8, 0);
+  assert.equal(out.C9, 0);
+  assert.equal(out.C10, 1);
+  assert.equal(out.C11, 1);
+  assert.equal(out.C12, 1);
+  assert.equal(out.C13, 0);
+  assert.equal(out.C14, 1);
+  assert.equal(out.C15, 0);
+  assert.equal(out.C16, 1);
+  assert.equal(out.C17, 0);
+  assert.equal(out.C18, 1);
+  assert.equal(out.C19, 1);
+  assert.equal(out.C20, 1);
+  assert.equal(out.C21, 1);
+  assert.equal(out.C22, 0);
+  assert.equal(out.C23, 1);
+  assert.equal(out.C24, 0);
+  assert.equal(out.C25, 1);
+  assert.equal(out.C26, 1);
+  assert.equal(out.C27, 0);
+  assert.equal(out.C28, 1);
+  assert.equal(out.C29, 0);
+  assert.equal(out.C30, 1);
+  assert.equal(out.C31, 0);
+  assert.equal(out.C32, 1);
+  assert.equal(out.C33, 0);
+  assert.equal(out.C34, 1);
+  assert.equal(out.C35, 0);
+  assert.equal(out.C36, 1);
+  assert.equal(out.C37, 1);
+  assert.equal(out.C38, 4);
+});
+
 test("COUNTIF (?-i) matches one case and (?i) still matches all cases", () => {
   const out = compute({
     A1: "Apple",

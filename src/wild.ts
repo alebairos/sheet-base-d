@@ -20,7 +20,7 @@ export function criteriaText(value: Value): string | null {
   }
 }
 
-// JS toUpperCase expands ß to SS. Criteria leave ß unchanged, so it does not match ss.
+// JS toUpperCase expands ß to SS. Equality criteria leave ß unchanged, so ß does not match ss.
 export function foldCriteria(text: string): string {
   let out = "";
   for (const ch of text) out += ch === "ß" ? ch : ch.toUpperCase();
@@ -124,7 +124,7 @@ function readSeq(scan: Scan, stop: boolean, mode: Mode): string | null {
       else if (c === ")" && depth > 0) depth--;
       continue;
     }
-    buf += c;
+    buf += sharpFold(c, mode.i) ?? c;
     scan.i++;
   }
   if (stop) return null;
@@ -363,7 +363,7 @@ function takeEscape(scan: Scan, mode: Mode, inClass: boolean): string | null {
     scan.i++;
     return "\\";
   }
-  if (next === "Q") return quoteLiteral(scan, inClass);
+  if (next === "Q") return quoteLiteral(scan, mode, inClass);
   if (next === "E") {
     scan.i += 2;
     return "E";
@@ -376,7 +376,7 @@ function takeEscape(scan: Scan, mode: Mode, inClass: boolean): string | null {
 
 // \Q starts a literal run and \E ends it. A missing \E runs through the end of the pattern.
 // The run keeps the case mode already in effect. \E with no open quote is the letter E.
-function quoteLiteral(scan: Scan, inClass: boolean): string {
+function quoteLiteral(scan: Scan, mode: Mode, inClass: boolean): string {
   scan.i += 2;
   let out = "";
   while (scan.i < scan.src.length) {
@@ -385,10 +385,20 @@ function quoteLiteral(scan: Scan, inClass: boolean): string {
       scan.i += 2;
       break;
     }
-    out += escapeLiteral(ch, inClass);
+    const folded = inClass ? null : sharpFold(ch, mode.i);
+    out += folded ?? escapeLiteral(ch, inClass);
     scan.i += 1;
   }
   return out;
+}
+
+// ICU full-folds ß and ẞ to ss. One pattern atom matches either letter or two case-folded s characters.
+// A following quantifier binds to that atom. A pattern of SS does not match ß, and a class stays one code point.
+const SHARP_FOLD = "(?:[ßẞ]|[sS][sS])";
+
+function sharpFold(ch: string, folding: boolean): string | null {
+  if (folding && (ch === "ß" || ch === "ẞ")) return SHARP_FOLD;
+  return null;
 }
 
 function quoteStop(src: string, from: number): number {

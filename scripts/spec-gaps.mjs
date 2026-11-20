@@ -6223,6 +6223,38 @@ const cases = [
     expect: { error: "#NAME?" },
     note: "canary: a hash glued after a trailing exponent dot stays #NAME?",
   },
+  {
+    id: "lead-dot-hash",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "=.5#" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#VALUE!" },
+    note: "a hash glued to a leading-dot number is a syntax error, exported as #VALUE!",
+  },
+  {
+    id: "lead-dot-hash-ref",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "=.5#REF!" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#VALUE!" },
+    note: "a hash error token glued to a leading-dot number stays a syntax error",
+  },
+  {
+    id: "lead-dot-exp-hash",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "=.5e2#" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#VALUE!" },
+    note: "a hash glued to a leading-dot exponent stays a syntax error",
+  },
+  {
+    id: "decimal-hash",
+    pri: "P1",
+    book: { sheets: { Sheet1: { A1: "=1.5#" } } },
+    cell: "Sheet1!A1",
+    expect: { error: "#NAME?" },
+    note: "canary: a hash glued to a digit-leading decimal stays #NAME?",
+  },
 ];
 
 function runCase(c) {

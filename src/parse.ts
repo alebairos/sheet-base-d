@@ -179,16 +179,18 @@ class Parser {
     const expAt = text.search(/[eE]/);
     const mag = expAt < 0 ? text : text.slice(0, expAt);
     if (n === 0 && /[1-9]/.test(mag)) n = Number.NaN;
-    this.emitNumberToken({ k: "num", n });
+    this.emitNumberToken({ k: "num", n }, leadDot);
   }
 
-  // 1 # and 1.2a # are syntax errors. A glued hash, as in 1#, stays a name.
-  private emitNumberToken(tok: Tok): void {
+  // 1 # and 1.2a # are syntax errors. A glued hash after 1 or 1.5 stays a name.
+  // A hash glued to a leading-dot number, as in .5# or .5e2#, is a syntax error.
+  private emitNumberToken(tok: Tok, leadDot = false): void {
     let j = this.i;
-    if (isWs(this.src[j] ?? "")) {
+    const spaced = isWs(this.src[j] ?? "");
+    if (spaced) {
       while (isWs(this.src[j] ?? "")) j++;
-      if ((this.src[j] ?? "") === "#") this.fail();
     }
+    if ((this.src[j] ?? "") === "#" && (spaced || leadDot)) this.fail();
     this.tok = tok;
   }
 
